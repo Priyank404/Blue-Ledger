@@ -6,6 +6,7 @@ import Transactions from './pages/Transactions'
 import Portfolio from './pages/Portfolio'
 import PortfolioDetails from './pages/PortfolioDetails'
 import Settings from './pages/Settings'
+import ExportData from './pages/ExportData'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
 function ProtectedRoute({ children }) {
@@ -55,6 +56,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Settings />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/export"
+        element={
+          <ProtectedRoute>
+            <ExportData />
           </ProtectedRoute>
         }
       />

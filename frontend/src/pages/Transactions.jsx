@@ -11,12 +11,41 @@ const Transactions = () => {
   const [price, setPrice] = useState('')
   const [date, setDate] = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
+  
+  // Filter states
+  const [filterType, setFilterType] = useState('') // 'Buy', 'Sell', or ''
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
+  const [minQty, setMinQty] = useState('')
+  const [maxQty, setMaxQty] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
 
   const filteredTransactions = transactions.filter((transaction) => {
     const matchesSearch = transaction.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStock = !selectedStock || transaction.name === selectedStock
-    return matchesSearch && matchesStock
+    const matchesType = !filterType || transaction.type === filterType
+    const matchesPrice = (!minPrice || transaction.price >= parseFloat(minPrice)) &&
+                        (!maxPrice || transaction.price <= parseFloat(maxPrice))
+    const matchesQty = (!minQty || transaction.qty >= parseFloat(minQty)) &&
+                      (!maxQty || transaction.qty <= parseFloat(maxQty))
+    const matchesDate = (!startDate || new Date(transaction.date) >= new Date(startDate)) &&
+                       (!endDate || new Date(transaction.date) <= new Date(endDate))
+    
+    return matchesSearch && matchesStock && matchesType && matchesPrice && matchesQty && matchesDate
   })
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setSelectedStock('')
+    setFilterType('')
+    setMinPrice('')
+    setMaxPrice('')
+    setMinQty('')
+    setMaxQty('')
+    setStartDate('')
+    setEndDate('')
+  }
 
   const handleAddTransaction = (e) => {
     e.preventDefault()
@@ -46,18 +75,29 @@ const Transactions = () => {
 
         {/* Filters and Add Transaction Form */}
         <div className="bg-white rounded-xl shadow-md p-6 space-y-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+            <button
+              onClick={clearFilters}
+              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+            >
+              Clear All
+            </button>
+          </div>
+
+          {/* Basic Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Search Stock</label>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search transactions..."
+                placeholder="Search by name..."
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
               />
             </div>
-            <div className="flex-1">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Stock</label>
               <select
                 value={selectedStock}
@@ -71,6 +111,88 @@ const Transactions = () => {
                   </option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              >
+                <option value="">All Types</option>
+                <option value="Buy">Buy</option>
+                <option value="Sell">Sell</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Date Range Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Price Range Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Min Price (₹)</label>
+              <input
+                type="number"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value)}
+                placeholder="Minimum price"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Max Price (₹)</label>
+              <input
+                type="number"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                placeholder="Maximum price"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Quantity Range Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Min Quantity</label>
+              <input
+                type="number"
+                value={minQty}
+                onChange={(e) => setMinQty(e.target.value)}
+                placeholder="Minimum quantity"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Max Quantity</label>
+              <input
+                type="number"
+                value={maxQty}
+                onChange={(e) => setMaxQty(e.target.value)}
+                placeholder="Maximum quantity"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              />
             </div>
           </div>
 

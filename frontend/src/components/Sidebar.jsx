@@ -12,6 +12,7 @@ const Sidebar = () => {
     { path: '/dashboard', label: 'Home', icon: '🏠' },
     { path: '/portfolio', label: 'Portfolio', icon: '📊' },
     { path: '/transactions', label: 'Transactions', icon: '💼' },
+    { path: '/export', label: 'Export Data', icon: '📥' },
     { path: '/settings', label: 'Settings', icon: '⚙️' },
   ]
 
