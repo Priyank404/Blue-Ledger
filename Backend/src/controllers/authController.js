@@ -13,10 +13,20 @@ export const signUp = async (req, res, next) =>{
 
         const result = await authServices.registerUser({email, password});
 
-        logger.info("User signup successful", {userID: result._id});
+        logger.info("User signup successful", {email});
+
+        res.cookie('token', result.token, {
+            httpOnly: true,
+            secure: false,
+            sameSite: 'lax',
+            maxAge: 24 * 60 * 60 * 1000
+        })
+
+        logger.info("cookie set successfully");
+
 
         return res.status(200).json(
-            new ApiResponse(200, result, "success")      
+            new ApiResponse(200, result.user, "success")      
         )
    } catch (error) {
         logger.error("Error while signing up user", {error})
@@ -36,8 +46,17 @@ export const logIn = async (req, res, next) =>{
 
         logger.info("User login successful", {email});
 
+        res.cookie('token', result.token, {
+            httpOnly: true,
+            secure: false,
+            sameSite: 'lax',
+            maxAge: 24 * 60 * 60 * 1000
+        })
+
+        logger.info("cookie set successfully");
+
         return res.status(200).json(
-            new ApiResponse(200, result, "success")
+            new ApiResponse(200, result.user, "success")
         )
     } catch (error) {
         logger.error("Error while logging in user", {error});

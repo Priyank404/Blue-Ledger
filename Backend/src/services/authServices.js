@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import logger from '../utilities/logger.js';
 import {User} from '../models/userSchema.js';
 import ApiError from '../utilities/apiError.js';
+import jwt from 'jsonwebtoken';
 
 
 
@@ -24,10 +25,20 @@ const registerUser = async ({email, password})=>{
         user = await User.create({email, password: hashedPassword});
 
 
-        return {
-            _id: user._id,
+         const token = jwt.sign({
+            id: user._id,
             email: user.email
-        }
+        }, process.env.JWT_SECRET_KEY, {expiresIn: '1d'});
+
+        logger.info("JWT token generated successfully");
+
+        return {
+           user:{
+            id: user._id,
+            email: user.email
+           },
+           token
+        };
 
     } catch (error) {
        throw error
@@ -55,10 +66,20 @@ const logInUser = async ({email, password})=>{
 
         logger.debug('Password verified successfully');
 
-        return {
-            _id: user._id,
+        const token = jwt.sign({
+            id: user._id,
             email: user.email
-        }
+        }, process.env.JWT_SECRET_KEY, {expiresIn: '1d'});
+
+        logger.info("JWT token generated successfully");
+
+        return {
+           user:{
+            id: user._id,
+            email: user.email
+           },
+           token
+        };
 
 
     } catch (error) {
