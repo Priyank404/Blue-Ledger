@@ -7,11 +7,11 @@ import ApiResponse from "../utilities/apiResponse.js";
 export const signUp = async (req, res, next) =>{
 
    try {
-        const {email, password} = req.body;
+        const {email, password, confirmPassword} = req.body;
 
         logger.info("User signup attemped", {email});
 
-        const result = await authServices.registerUser({email, password});
+        const result = await authServices.registerUser({email, password, confirmPassword});
 
         logger.info("User signup successful", {email});
 

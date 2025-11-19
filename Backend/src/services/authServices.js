@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 
 
 
-const registerUser = async ({email, password})=>{
+const registerUser = async ({email, password, confirmPassword})=>{
     
     
 
