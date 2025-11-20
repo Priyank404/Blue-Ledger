@@ -89,7 +89,7 @@ const logInUser = async ({email, password})=>{
 
 const authServices = {
   registerUser,
-  logInUser
+  logInUser,
 };
 
 export default authServices;
