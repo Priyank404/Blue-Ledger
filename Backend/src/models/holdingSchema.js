@@ -1,7 +1,4 @@
 import mongoose from "mongoose";
-import { Portfolio } from "./portfolioSchema";
-import { required } from "joi";
-import { ExceptionHandler } from "winston";
 
 const holdingsSchema = new mongoose.Schema({
     Portfolio: {
@@ -10,32 +7,32 @@ const holdingsSchema = new mongoose.Schema({
         required: true
     },
 
-    companyName: {
+    symbol: {  // Stock symbol (e.g., RELIANCE, TCS)
         type: String,
-        required: true
+        required: true,
+        uppercase: true
     },
 
     Quantity: {
         type: Number,
-        required: true
-    },
-
-    currentValue: {
-        type: Number,
-        required: true
+        required: true,
+        min:0
     },
 
     avgBuyPrice: {
         type: Number,
-        required: true
+        required: true,
+        min:0
     },
 
-    totalValue: {
-        type: Number,
-        required: true
-    },
+    lastBuyDate: {
+    type: Date,
+    required: true
+    }
 
     
 })
+
+holdingsSchema.index({ Portfolio: 1, symbol: 1 }, { unique: true });
 
 export const Holdings = mongoose.model("Holdings", holdingsSchema);

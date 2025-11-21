@@ -2,9 +2,9 @@
 import mongoose from "mongoose";
 
 const transactionSchema = new mongoose.Schema({
-    user:{
+     portfolio: {  // Add portfolio reference instead of user
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
+        ref: "Portfolio",
         required: true
     },
     
@@ -14,19 +14,22 @@ const transactionSchema = new mongoose.Schema({
         required: true
     },
 
-    companyName: {
+    symbol: {  // Add stock symbol
         type: String,
-        required: true
+        required: true,
+        uppercase: true
     },
 
     quantity: {
         type: Number,
-        required: true
+        required: true,
+        min: 1
     },
 
-    pricePerUnite: {
+    pricePerUnit: {
         type: Number,
-        required: true
+        required: true,
+        min: 0
     },
 
     date: {
