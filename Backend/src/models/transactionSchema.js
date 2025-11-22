@@ -2,7 +2,7 @@
 import mongoose from "mongoose";
 
 const transactionSchema = new mongoose.Schema({
-     portfolio: {  // Add portfolio reference instead of user
+     Portfolio: {  // Add portfolio reference instead of user
         type: mongoose.Schema.Types.ObjectId,
         ref: "Portfolio",
         required: true
