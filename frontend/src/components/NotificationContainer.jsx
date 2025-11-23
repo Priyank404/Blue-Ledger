@@ -1,26 +1,7 @@
 import { useState, useCallback } from 'react'
 import Notification from './Notification'
+import React from 'react'
 
-let notificationId = 0
-
-export const useNotification = () => {
-  const [notifications, setNotifications] = useState([])
-
-  const showNotification = useCallback((message, type = 'info') => {
-    const id = notificationId++
-    const newNotification = { id, message, type }
-    
-    setNotifications((prev) => [...prev, newNotification])
-    
-    return id
-  }, [])
-
-  const removeNotification = useCallback((id) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
-  }, [])
-
-  return { showNotification, removeNotification, notifications }
-}
 
 const NotificationContainer = ({ notifications, onRemove }) => {
   return (
@@ -37,5 +18,6 @@ const NotificationContainer = ({ notifications, onRemove }) => {
   )
 }
 
-export default NotificationContainer
+export default NotificationContainer ;
+
 

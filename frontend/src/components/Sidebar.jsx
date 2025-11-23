@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useNotification } from '../context/NotificationContext'
 import { logOutUser } from '../APIs/Auth'
 
 
@@ -8,6 +9,7 @@ const Sidebar = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { logout } = useAuth()
+  const { showNotification } = useNotification()
   const [isOpen, setIsOpen] = useState(false)
 
   const handleLogout = async() => {
@@ -16,13 +18,16 @@ const Sidebar = () => {
       
       if(res.message == "success"){
         logout();
+        showNotification('Logged out successfully. See you soon!', 'error');
         navigate("/");
+      } else {
+        showNotification('Logout failed. Please try again.', 'error');
       }
     } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Logout failed. Please try again.';
+      showNotification(errorMessage, 'error');
       console.log(error);
-      
     }
-    
   }
 
   const menuItems = [

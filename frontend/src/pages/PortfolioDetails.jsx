@@ -4,15 +4,15 @@ import DashboardLayout from '../layouts/DashboardLayout'
 import { stockHoldings, stockPriceHistory, transactions, stocks } from '../data/dummyData'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 import TransactionsTable from '../components/TransactionsTable'
-import NotificationContainer from '../components/NotificationContainer'
+import { useNotification } from '../context/NotificationContext'
 import { deleteTransaction } from '../APIs/transaction'
 
 const PortfolioDetails = () => {
   const { id } = useParams()
   const stock = stockHoldings.find((s) => s.id === parseInt(id))
   const [showHistory, setShowHistory] = useState(false)
-  const [notifications, setNotifications] = useState([])
   const [stockTransactionsList, setStockTransactionsList] = useState([])
+  const { showNotification } = useNotification()
 
   useEffect(() => {
     if (stock) {
@@ -31,18 +31,6 @@ const PortfolioDetails = () => {
         </div>
       </DashboardLayout>
     )
-  }
-
-  const showNotification = (message, type = 'info') => {
-    const id = Date.now()
-    setNotifications((prev) => [...prev, { id, message, type }])
-    setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== id))
-    }, 5000)
-  }
-
-  const removeNotification = (id) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
   }
 
   const handleDeleteTransaction = async (transactionId) => {
@@ -502,7 +490,6 @@ const PortfolioDetails = () => {
           </div>
         )}
       </div>
-      <NotificationContainer notifications={notifications} onRemove={removeNotification} />
     </DashboardLayout>
   )
 }

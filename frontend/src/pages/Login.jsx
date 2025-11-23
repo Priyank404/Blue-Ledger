@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useNotification } from '../context/NotificationContext'
 import { logInUser } from '../APIs/Auth'
 
 const Login = () => {
@@ -9,18 +10,25 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false)
   const { login } = useAuth()
   const navigate = useNavigate()
+  const { showNotification } = useNotification()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      const res = await logInUser(email,password);
+      const res = await logInUser(email, password);
 
       if(res.message == 'success'){
         login();
+        // Show success notification - will appear in dashboard after navigation
+        showNotification('Login successful! Welcome back.', 'success');
         navigate('/dashboard');
+      } else {
+        showNotification(res.message || 'Login failed. Please check your credentials.', 'error');
       }
 
     } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Login failed. Please try again.';
+      showNotification(errorMessage, 'error');
       console.log(error);
     }
   }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import React from 'react'
 
 const Notification = ({ message, type = 'info', onClose }) => {
   const [isVisible, setIsVisible] = useState(true)
@@ -12,7 +13,8 @@ const Notification = ({ message, type = 'info', onClose }) => {
     }, 5000) // Auto close after 5 seconds
 
     return () => clearTimeout(timer)
-  }, [onClose])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleClose = () => {
     setIsVisible(false)

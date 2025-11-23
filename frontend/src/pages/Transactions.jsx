@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import TransactionsTable from '../components/TransactionsTable'
-import NotificationContainer from '../components/NotificationContainer'
+import { useNotification } from '../context/NotificationContext'
 import { transactions, stocks } from '../data/dummyData'
 import { addTransaction, deleteTransaction } from '../APIs/transaction'
 
@@ -13,8 +13,8 @@ const Transactions = () => {
   const [price, setPrice] = useState('')
   const [date, setDate] = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
-  const [notifications, setNotifications] = useState([])
   const [transactionsList, setTransactionsList] = useState(transactions)
+  const { showNotification } = useNotification()
   
   // Filter states
   const [filterType, setFilterType] = useState('') // 'Buy', 'Sell', or ''
@@ -24,18 +24,6 @@ const Transactions = () => {
   const [maxQty, setMaxQty] = useState('')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-
-  const showNotification = (message, type = 'info') => {
-    const id = Date.now()
-    setNotifications((prev) => [...prev, { id, message, type }])
-    setTimeout(() => {
-      setNotifications((prev) => prev.filter((n) => n.id !== id))
-    }, 5000)
-  }
-
-  const removeNotification = (id) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
-  }
 
   const filteredTransactions = transactionsList.filter((transaction) => {
     const matchesSearch = transaction.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -67,7 +55,7 @@ const Transactions = () => {
     e.preventDefault()
     try {
       const response = await addTransaction(transactionType, selectedStock, qty, price, date)
-      showNotification(response.message || 'Transaction added successfully', 'success')
+      showNotification('Transaction added successfully', 'success')
       setSelectedStock('')
       setQty('')
       setPrice('')
@@ -83,7 +71,7 @@ const Transactions = () => {
   const handleDeleteTransaction = async (transactionId) => {
     try {
       const response = await deleteTransaction(transactionId)
-      showNotification(response.message || 'Transaction deleted successfully', 'success')
+      showNotification('Transaction deleted successfully', 'success')
       // Remove from local state - in a real app, you'd refresh from backend
       setTransactionsList((prev) => prev.filter((t) => t.id !== transactionId))
     } catch (error) {
@@ -328,7 +316,6 @@ const Transactions = () => {
           onDelete={handleDeleteTransaction}
         />
       </div>
-      <NotificationContainer notifications={notifications} onRemove={removeNotification} />
     </DashboardLayout>
   )
 }

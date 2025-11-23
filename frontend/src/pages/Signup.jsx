@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { signUpUser } from '../APIs/Auth.js'
+import { useNotification } from '../context/NotificationContext'
+
 
 const Signup = () => {
   const [email, setEmail] = useState('')
@@ -10,19 +12,26 @@ const Signup = () => {
   const { login } = useAuth()
   const navigate = useNavigate()
 
+  const { showNotification } = useNotification();
+
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
       const res = await signUpUser(email, password, confirmPassword);
       
+
       
       if(res.message == "success"){
         login();
-        navigate("/dashboard");
+        showNotification('Account created successfully! Welcome to Portfolio Tracker.', 'success');
+        navigate("/dashboard");   
+      } else {
+        showNotification(res.message || 'Signup failed. Please try again.', 'error');
       }
-
-      
     } catch (error) {
+      const errorMessage = error.response?.data?.message || 'Signup failed. Please try again.';
+      showNotification(errorMessage, 'error');
       console.log(error);
     }
   }

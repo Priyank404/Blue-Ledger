@@ -8,6 +8,7 @@ import PortfolioDetails from './pages/PortfolioDetails'
 import Settings from './pages/Settings'
 import ExportData from './pages/ExportData'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { NotificationProvider } from './context/NotificationContext'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth()
@@ -73,11 +74,13 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
+    <NotificationProvider>
+      <AuthProvider>
+          <Router>
+            <AppRoutes />
+          </Router>
+      </AuthProvider>
+    </NotificationProvider>
   )
 }
 
