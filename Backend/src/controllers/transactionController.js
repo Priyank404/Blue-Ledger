@@ -47,7 +47,7 @@ export const deleteTransaction = async (req, res, next) =>{
         const userId = req.user.id;
 
         logger.info("Delete transaction attemped");
-        const result = await transaction.removeTransaction({userId});
+        const result = await transaction.removeTransaction({userId, transactionId:req.params.id});
 
         logger.info("Delete transaction successful");
 

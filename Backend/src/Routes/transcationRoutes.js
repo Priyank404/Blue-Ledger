@@ -7,8 +7,8 @@ const router = Router();
 
 router.post('/add',verifyJWT, validateTransaction, addTransaction);
 
-router.post('/remove',verifyJWT, validateTransaction, deleteTransaction);
+router.delete('/remove/:id', verifyJWT, deleteTransaction);
 
-router.get('/get'. verifyJWT, validateTransaction, getTransactions);
+router.get('/get', verifyJWT, getTransactions);
 
 export default router
