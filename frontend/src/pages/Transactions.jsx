@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import TransactionsTable from '../components/TransactionsTable'
+import NotificationContainer from '../components/NotificationContainer'
 import { transactions, stocks } from '../data/dummyData'
-import {addTransaction }from '../APIs/transaction'
+import { addTransaction, deleteTransaction } from '../APIs/transaction'
 
 const Transactions = () => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -12,6 +13,8 @@ const Transactions = () => {
   const [price, setPrice] = useState('')
   const [date, setDate] = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
+  const [notifications, setNotifications] = useState([])
+  const [transactionsList, setTransactionsList] = useState(transactions)
   
   // Filter states
   const [filterType, setFilterType] = useState('') // 'Buy', 'Sell', or ''
@@ -22,7 +25,19 @@ const Transactions = () => {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
 
-  const filteredTransactions = transactions.filter((transaction) => {
+  const showNotification = (message, type = 'info') => {
+    const id = Date.now()
+    setNotifications((prev) => [...prev, { id, message, type }])
+    setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== id))
+    }, 5000)
+  }
+
+  const removeNotification = (id) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
+  }
+
+  const filteredTransactions = transactionsList.filter((transaction) => {
     const matchesSearch = transaction.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStock = !selectedStock || transaction.name === selectedStock
     const matchesType = !filterType || transaction.type === filterType
@@ -48,17 +63,32 @@ const Transactions = () => {
     setEndDate('')
   }
 
-  const handleAddTransaction = (e) => {
+  const handleAddTransaction = async (e) => {
     e.preventDefault()
-    // In a real app, this would add to state/backend
-    addTransaction(transactionType, selectedStock, qty, price, date)
-    // console.log(transactionType, selectedStock, qty, price, date);
-    console.log("clicked");
-    setSelectedStock('')
-    setQty('')
-    setPrice('')
-    setDate('')
-    setShowAddForm(false)
+    try {
+      const response = await addTransaction(transactionType, selectedStock, qty, price, date)
+      showNotification(response.message || 'Transaction added successfully', 'success')
+      setSelectedStock('')
+      setQty('')
+      setPrice('')
+      setDate('')
+      setShowAddForm(false)
+      // Refresh transactions list - in a real app, you'd fetch from backend
+      // setTransactionsList(await fetchTransactions())
+    } catch (error) {
+      showNotification(error.response?.data?.message || 'Failed to add transaction', 'error')
+    }
+  }
+
+  const handleDeleteTransaction = async (transactionId) => {
+    try {
+      const response = await deleteTransaction(transactionId)
+      showNotification(response.message || 'Transaction deleted successfully', 'success')
+      // Remove from local state - in a real app, you'd refresh from backend
+      setTransactionsList((prev) => prev.filter((t) => t.id !== transactionId))
+    } catch (error) {
+      showNotification(error.response?.data?.message || 'Failed to delete transaction', 'error')
+    }
   }
 
   return (
@@ -79,18 +109,20 @@ const Transactions = () => {
 
         {/* Filters and Add Transaction Form */}
         <div className="bg-white rounded-xl shadow-md p-6 space-y-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
-            <button
-              onClick={clearFilters}
-              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-            >
-              Clear All
-            </button>
-          </div>
+          {!showAddForm && (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+                <button
+                  onClick={clearFilters}
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  Clear All
+                </button>
+              </div>
 
-          {/* Basic Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Basic Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Search Stock</label>
               <input
@@ -199,6 +231,8 @@ const Transactions = () => {
               />
             </div>
           </div>
+            </>
+          )}
 
           {showAddForm && (
             <div className="border-t pt-4 mt-4">
@@ -287,8 +321,14 @@ const Transactions = () => {
         </div>
 
         {/* Transactions Table */}
-        <TransactionsTable transactions={filteredTransactions} showAll={true} />
+        <TransactionsTable 
+          transactions={filteredTransactions} 
+          showAll={true} 
+          showDelete={true}
+          onDelete={handleDeleteTransaction}
+        />
       </div>
+      <NotificationContainer notifications={notifications} onRemove={removeNotification} />
     </DashboardLayout>
   )
 }

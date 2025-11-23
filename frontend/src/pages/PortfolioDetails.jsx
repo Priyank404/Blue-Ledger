@@ -1,12 +1,24 @@
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
 import { stockHoldings, stockPriceHistory, transactions, stocks } from '../data/dummyData'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 import TransactionsTable from '../components/TransactionsTable'
+import NotificationContainer from '../components/NotificationContainer'
+import { deleteTransaction } from '../APIs/transaction'
 
 const PortfolioDetails = () => {
   const { id } = useParams()
   const stock = stockHoldings.find((s) => s.id === parseInt(id))
+  const [showHistory, setShowHistory] = useState(false)
+  const [notifications, setNotifications] = useState([])
+  const [stockTransactionsList, setStockTransactionsList] = useState([])
+
+  useEffect(() => {
+    if (stock) {
+      setStockTransactionsList(transactions.filter((t) => t.name === stock.name))
+    }
+  }, [stock])
 
   if (!stock) {
     return (
@@ -21,8 +33,30 @@ const PortfolioDetails = () => {
     )
   }
 
+  const showNotification = (message, type = 'info') => {
+    const id = Date.now()
+    setNotifications((prev) => [...prev, { id, message, type }])
+    setTimeout(() => {
+      setNotifications((prev) => prev.filter((n) => n.id !== id))
+    }, 5000)
+  }
+
+  const removeNotification = (id) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id))
+  }
+
+  const handleDeleteTransaction = async (transactionId) => {
+    try {
+      const response = await deleteTransaction(transactionId)
+      showNotification(response.message || 'Transaction deleted successfully', 'success')
+      setStockTransactionsList((prev) => prev.filter((t) => t.id !== transactionId))
+    } catch (error) {
+      showNotification(error.response?.data?.message || 'Failed to delete transaction', 'error')
+    }
+  }
+
   const priceHistory = stockPriceHistory[stock.name] || []
-  const stockTransactions = transactions.filter((t) => t.name === stock.name)
+  const stockTransactions = stockTransactionsList
   const stockInfo = stocks.find((s) => s.name === stock.name)
   
   // Calculate additional metrics
@@ -431,8 +465,11 @@ const PortfolioDetails = () => {
               <button className="w-full px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-md">
                 Sell
               </button>
-              <button className="w-full px-4 py-3 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors shadow-md">
-                View Full History
+              <button 
+                onClick={() => setShowHistory(!showHistory)}
+                className="w-full px-4 py-3 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors shadow-md"
+              >
+                {showHistory ? 'Hide History' : 'View Full History'}
               </button>
             </div>
             {stockInfo && (
@@ -451,15 +488,21 @@ const PortfolioDetails = () => {
         </div>
 
         {/* Transaction History */}
-        {stockTransactions.length > 0 && (
+        {showHistory && stockTransactions.length > 0 && (
           <div className="bg-white rounded-xl shadow-md p-6">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">
               Transaction History for {stock.name}
             </h3>
-            <TransactionsTable transactions={stockTransactions} showAll={true} />
+            <TransactionsTable 
+              transactions={stockTransactions} 
+              showAll={true} 
+              showDelete={true}
+              onDelete={handleDeleteTransaction}
+            />
           </div>
         )}
       </div>
+      <NotificationContainer notifications={notifications} onRemove={removeNotification} />
     </DashboardLayout>
   )
 }

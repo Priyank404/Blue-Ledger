@@ -1,4 +1,4 @@
-const TransactionsTable = ({ transactions, showAll = false }) => {
+const TransactionsTable = ({ transactions, showAll = false, onDelete = null, showDelete = false }) => {
   const displayTransactions = showAll ? transactions : transactions.slice(0, 5)
 
   const formatDate = (dateString) => {
@@ -14,6 +14,12 @@ const TransactionsTable = ({ transactions, showAll = false }) => {
     }).format(amount)
   }
 
+  const handleDelete = (transactionId) => {
+    if (window.confirm('Are you sure you want to delete this transaction?')) {
+      onDelete && onDelete(transactionId)
+    }
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden">
       <div className="overflow-x-auto">
@@ -26,6 +32,7 @@ const TransactionsTable = ({ transactions, showAll = false }) => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
+              {showDelete && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -57,6 +64,16 @@ const TransactionsTable = ({ transactions, showAll = false }) => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   {formatCurrency(transaction.totalAmt)}
                 </td>
+                {showDelete && (
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <button
+                      onClick={() => handleDelete(transaction.id)}
+                      className="text-red-600 hover:text-red-800 font-medium transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
