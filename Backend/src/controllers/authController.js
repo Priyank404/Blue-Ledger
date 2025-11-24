@@ -1,4 +1,3 @@
-import express from "express"
 import logger from "../utilities/logger.js"
 import authServices from '../services/authServices.js';
 import ApiResponse from "../utilities/apiResponse.js";
