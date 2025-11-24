@@ -10,6 +10,7 @@ import ExportData from './pages/ExportData'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
 import { TransactionProvider } from './context/TransactionContext'
+import { HoldingProvider } from './context/HoldingsContext'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth()
@@ -77,11 +78,13 @@ function App() {
   return (
     <NotificationProvider>
       <TransactionProvider>
-        <AuthProvider>
-          <Router>
-            <AppRoutes />
-          </Router>
-        </AuthProvider>
+        <HoldingProvider>
+          <AuthProvider>
+            <Router>
+              <AppRoutes />
+            </Router>
+          </AuthProvider>
+        </HoldingProvider>
       </TransactionProvider>
     </NotificationProvider>
   )

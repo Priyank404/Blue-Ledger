@@ -6,9 +6,10 @@ export const stocks = [
   { id: 3, name: 'Reliance', symbol: 'RELIANCE', sector: 'Energy', currentPrice: 2450 },
   { id: 4, name: 'HDFC Bank', symbol: 'HDFCBANK', sector: 'Finance', currentPrice: 1650 },
   { id: 5, name: 'ICICI Bank', symbol: 'ICICIBANK', sector: 'Finance', currentPrice: 950 },
-  { id: 6, name: 'Wipro', symbol: 'WIPRO', sector: 'Technology', currentPrice: 450 },
+  { id: 6, name: 'Wipro', symbol: 'WIPOR', sector: 'Technology', currentPrice: 850 },
   { id: 7, name: 'Tata Motors', symbol: 'TATAMOTORS', sector: 'Automotive', currentPrice: 650 },
   { id: 8, name: 'Bharti Airtel', symbol: 'BHARTIARTL', sector: 'Telecom', currentPrice: 1150 },
+  { id: 9, name: 'Bharti Airtel', symbol: 'SJVN', sector: 'Telecom', currentPrice: 12 }
 ]
 
 export const transactions = [
@@ -61,8 +62,10 @@ export const stockHoldings = [
   { id: 3, name: 'Reliance', qty: 2, avgPrice: 2400, currentPrice: 2450, totalInvest: 4800, currentValue: 4900, pnl: 100 },
   { id: 4, name: 'HDFC Bank', qty: 4, avgPrice: 1600, currentPrice: 1650, totalInvest: 6400, currentValue: 6600, pnl: 200 },
   { id: 5, name: 'ICICI Bank', qty: 6, avgPrice: 950, currentPrice: 950, totalInvest: 5700, currentValue: 5700, pnl: 0 },
-  { id: 6, name: 'Wipro', qty: 10, avgPrice: 450, currentPrice: 450, totalInvest: 4500, currentValue: 4500, pnl: 0 },
+  { id: 6, name: 'WIPOR', qty: 10, avgPrice: 450, currentPrice: 450, totalInvest: 4500, currentValue: 4500, pnl: 0 },
   { id: 7, name: 'Bharti Airtel', qty: 5, avgPrice: 1150, currentPrice: 1150, totalInvest: 5750, currentValue: 5750, pnl: 0 },
+  { id: 8, name: 'SJVN', qty: 5, avgPrice: 1150, currentPrice: 12, totalInvest: 5750, currentValue: 5750, pnl: 0 },
+
 ]
 
 export const stockPriceHistory = {

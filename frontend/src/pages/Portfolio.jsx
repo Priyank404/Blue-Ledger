@@ -1,10 +1,16 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { stockHoldings, sectorAllocation, portfolioValueHistory, portfolioData, assetAllocation } from '../data/dummyData'
+import { sectorAllocation, assetAllocation,portfolioValueHistory } from '../data/dummyData'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts'
+import { useHoldings } from "../context/HoldingsContext";
 
 const Portfolio = () => {
+
+  const { holdings, loading } = useHoldings();
+  
+
+
   // Filter states for Stock Holdings table
   const [searchStock, setSearchStock] = useState('')
   const [minQty, setMinQty] = useState('')
@@ -22,47 +28,59 @@ const Portfolio = () => {
     }).format(amount)
   }
 
+  if (loading) return <DashboardLayout><p>Loading...</p></DashboardLayout>
+  
+  
+
+  // Compute Portfolio Summary Values
+const totalInvestment = holdings.reduce((sum, h) => sum + h.totalInvest, 0);
+const totalValue = holdings.reduce((sum, h) => sum + h.currentValue, 0);
+const totalPnl = holdings.reduce((sum, h) => sum + h.pnl, 0);
+const overallROI = totalInvestment > 0 
+  ? ((totalPnl / totalInvestment) * 100).toFixed(2) 
+  : 0;
+
+// Prepare P&L distribution chart data
+const pnlDistribution = holdings.map(h => ({
+  name: h.name,
+  pnl: h.pnl,
+  pnlPercent: ((h.pnl / h.totalInvest) * 100).toFixed(2),
+}));
+
+// Prepare Value Allocation chart data
+const valueAllocation = holdings
+  .map(h => ({
+    name: h.name,
+    value: h.currentValue,
+    percentage: ((h.currentValue / totalValue) * 100).toFixed(1),
+  }))
+  .sort((a, b) => b.value - a.value);
+
+// Top Performers & Losers
+const sortedHoldings = [...holdings].sort((a, b) => b.pnl - a.pnl);
+const topPerformers = sortedHoldings.slice(0, 3).filter(h => h.pnl > 0);
+const topLosers = sortedHoldings.slice(-3).reverse();
+
+// Portfolio Value Change (use your actual holdings data)
+const latestValue = totalValue;
+const previousValue = 0; // until you implement real history from backend
+const valueChange = latestValue - previousValue;
+const valueChangePercent = previousValue > 0 
+  ? ((valueChange / previousValue) * 100).toFixed(2) 
+  : 0;
+
+
+
+
+
   const COLORS = sectorAllocation.map(s => s.color)
   const ASSET_COLORS = assetAllocation.map(a => a.color)
 
-  // Calculate portfolio statistics
-  const totalPnl = stockHoldings.reduce((sum, stock) => sum + stock.pnl, 0)
-  const totalInvestment = stockHoldings.reduce((sum, stock) => sum + stock.totalInvest, 0)
-  const totalValue = stockHoldings.reduce((sum, stock) => sum + stock.currentValue, 0)
-  const overallROI = totalInvestment > 0 ? ((totalPnl / totalInvestment) * 100).toFixed(2) : '0.00'
 
-  // Top performers and losers
-  const sortedHoldings = [...stockHoldings].sort((a, b) => b.pnl - a.pnl)
-  const topPerformers = sortedHoldings.slice(0, 3).filter(s => s.pnl > 0)
-  // Top losers - show stocks with lowest P&L (even if they're break-even or slightly positive)
-  const topLosers = sortedHoldings.slice(-3).reverse() // Always show bottom 3, regardless of sign
 
-  // Portfolio value change
-  const latestValue = portfolioValueHistory.length > 0 
-    ? portfolioValueHistory[portfolioValueHistory.length - 1].value 
-    : 0
-  const previousValue = portfolioValueHistory.length > 1 
-    ? portfolioValueHistory[portfolioValueHistory.length - 2].value 
-    : 0
-  const valueChange = latestValue - previousValue
-  const valueChangePercent = previousValue > 0 ? ((valueChange / previousValue) * 100).toFixed(2) : '0.00'
-
-  // Prepare data for P&L distribution chart
-  const pnlDistribution = stockHoldings.map((stock) => ({
-    name: stock.name,
-    pnl: stock.pnl,
-    pnlPercent: ((stock.pnl / stock.totalInvest) * 100).toFixed(2),
-  }))
-
-  // Value allocation by stock
-  const valueAllocation = stockHoldings.map((stock) => ({
-    name: stock.name,
-    value: stock.currentValue,
-    percentage: ((stock.currentValue / totalValue) * 100).toFixed(1),
-  })).sort((a, b) => b.value - a.value)
 
   // Filter stock holdings
-  const filteredStockHoldings = stockHoldings.filter((holding) => {
+  const filteredHoldings = holdings.filter((holding) => {
     const matchesSearch = holding.name.toLowerCase().includes(searchStock.toLowerCase())
     const matchesQty = (!minQty || holding.qty >= parseFloat(minQty)) &&
                       (!maxQty || holding.qty <= parseFloat(maxQty))
@@ -98,7 +116,7 @@ const Portfolio = () => {
           </div>
           <div className="text-right">
             <p className="text-sm text-gray-600">Portfolio Value</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(latestValue || portfolioData.portfolioValue)}</p>
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(latestValue)}</p>
             <p className={`text-sm font-semibold ${valueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {valueChange >= 0 ? '+' : ''}{formatCurrency(valueChange)} ({valueChangePercent >= 0 ? '+' : ''}{valueChangePercent}%)
             </p>
@@ -109,16 +127,16 @@ const Portfolio = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white rounded-xl shadow-md p-6">
             <p className="text-sm text-gray-600 mb-1">Total Investment</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalInvestment || portfolioData.totalInvestment)}</p>
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalInvestment )}</p>
           </div>
           <div className="bg-white rounded-xl shadow-md p-6">
             <p className="text-sm text-gray-600 mb-1">Current Value</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalValue || portfolioData.portfolioValue)}</p>
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalValue )}</p>
           </div>
           <div className="bg-white rounded-xl shadow-md p-6">
             <p className="text-sm text-gray-600 mb-1">Total Profit/Loss</p>
             <p className={`text-2xl font-bold ${totalPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {totalPnl >= 0 ? '+' : ''}{formatCurrency(totalPnl || portfolioData.totalGainLoss)}
+              {totalPnl >= 0 ? '+' : ''}{formatCurrency(totalPnl )}
             </p>
             <p className={`text-sm mt-1 font-semibold ${totalPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {overallROI >= 0 ? '+' : ''}{overallROI}% ROI
@@ -126,7 +144,7 @@ const Portfolio = () => {
           </div>
           <div className="bg-white rounded-xl shadow-md p-6">
             <p className="text-sm text-gray-600 mb-1">Number of Holdings</p>
-            <p className="text-2xl font-bold text-gray-900">{stockHoldings.length}</p>
+            <p className="text-2xl font-bold text-gray-900">{holdings.length}</p>
             <p className="text-xs text-gray-500 mt-1">Active stocks</p>
           </div>
         </div>
@@ -507,8 +525,8 @@ const Portfolio = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredStockHoldings.length > 0 ? (
-                  filteredStockHoldings.map((holding) => (
+                {filteredHoldings.length > 0 ? (
+                  filteredHoldings.map((holding) => (
                   <tr key={holding.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Link
