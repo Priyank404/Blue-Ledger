@@ -2,10 +2,14 @@ import { useState } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import TransactionsTable from '../components/TransactionsTable'
 import { useNotification } from '../context/NotificationContext'
-import { transactions, stocks } from '../data/dummyData'
+import { stocks } from '../data/dummyData'
 import { addTransaction, deleteTransaction } from '../APIs/transaction'
+import { useTransactions } from '../context/TransactionContext'
 
 const Transactions = () => {
+
+  const {transactions, loding} = useTransactions()
+
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedStock, setSelectedStock] = useState('')
   const [transactionType, setTransactionType] = useState('BUY')

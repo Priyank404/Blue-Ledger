@@ -9,6 +9,7 @@ import Settings from './pages/Settings'
 import ExportData from './pages/ExportData'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
+import { TransactionProvider } from './context/TransactionContext'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth()
@@ -75,11 +76,13 @@ function AppRoutes() {
 function App() {
   return (
     <NotificationProvider>
-      <AuthProvider>
+      <TransactionProvider>
+        <AuthProvider>
           <Router>
             <AppRoutes />
           </Router>
-      </AuthProvider>
+        </AuthProvider>
+      </TransactionProvider>
     </NotificationProvider>
   )
 }

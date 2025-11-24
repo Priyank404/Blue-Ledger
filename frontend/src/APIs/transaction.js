@@ -9,3 +9,8 @@ export const deleteTransaction = async (transactionId) => {
     const response = await api.delete(`/transaction/delete/${transactionId}`);
     return response.data
 }
+
+export const getTransactions = async ()=>{
+    const response = await api.get("/transaction/get")
+    return response.data.data
+}
