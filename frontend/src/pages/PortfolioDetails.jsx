@@ -1,26 +1,44 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { stockHoldings, stockPriceHistory, transactions, stocks } from '../data/dummyData'
+import {  stockPriceHistory } from '../data/dummyData'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 import TransactionsTable from '../components/TransactionsTable'
 import { useNotification } from '../context/NotificationContext'
 import { deleteTransaction } from '../APIs/transaction'
+import { useHoldings } from "../context/HoldingsContext"
+import { useTransactions } from "../context/TransactionContext";
+
+const generateFakePriceHistory = (currentPrice, days = 7) => {
+  const history = [];
+  for (let i = days; i > 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+
+    const priceVariation = (Math.random() * 4) - 2; // -2 to +2 random price
+    history.push({
+      date: date.toISOString(),
+      price: Math.max(1, currentPrice + priceVariation)
+    });
+  }
+  return history;
+};
+
+
 
 const PortfolioDetails = () => {
   const { id } = useParams()
-  const stock = stockHoldings.find((s) => s.id === parseInt(id))
-  const [showHistory, setShowHistory] = useState(false)
-  const [stockTransactionsList, setStockTransactionsList] = useState([])
-  const { showNotification } = useNotification()
 
-  useEffect(() => {
-    if (stock) {
-      setStockTransactionsList(transactions.filter((t) => t.name === stock.name))
-    }
-  }, [stock])
+ const { holdings, loading } = useHoldings();
+ const { transactions, loading: transactionsLoading } = useTransactions();
 
-  if (!stock) {
+ if (loading || transactionsLoading) {
+  return <DashboardLayout><p>Loading...</p></DashboardLayout>;
+  }
+ 
+ const stock = holdings.find(h => h.id === id);
+
+ if (!stock) {
     return (
       <DashboardLayout>
         <div className="text-center py-12">
@@ -33,6 +51,25 @@ const PortfolioDetails = () => {
     )
   }
 
+
+  const [showHistory, setShowHistory] = useState(false)
+  const [stockTransactionsList, setStockTransactionsList] = useState([])
+  const { showNotification } = useNotification()
+
+  
+  
+
+
+  useEffect(() => {
+    if (stock) {
+      const filtered = transactions.filter(
+      (t) => t.name.toLowerCase() === stock.name.toLowerCase()
+    );
+    setStockTransactionsList(filtered);
+    }
+  }, [stock, transactions])
+
+
   const handleDeleteTransaction = async (transactionId) => {
     try {
       const response = await deleteTransaction(transactionId)
@@ -43,9 +80,12 @@ const PortfolioDetails = () => {
     }
   }
 
-  const priceHistory = stockPriceHistory[stock.name] || []
+ const priceHistory =
+  stockPriceHistory[stock.name] && stockPriceHistory[stock.name].length > 0
+    ? stockPriceHistory[stock.name]
+    : generateFakePriceHistory(stock.currentPrice);
+
   const stockTransactions = stockTransactionsList
-  const stockInfo = stocks.find((s) => s.name === stock.name)
   
   // Calculate additional metrics
   const formatCurrency = (amount) => {
@@ -82,16 +122,24 @@ const PortfolioDetails = () => {
     avgBuyPrice: stock.avgPrice,
   }))
 
+  console.log("Price History For", stock.name, priceHistory);
+
   // P&L calculation over time
-  const pnlOverTime = priceHistory.map((entry) => ({
+  const pnlOverTime = priceHistory.map((entry) => {
+  const pnlValue = (entry.price - stock.avgPrice) * stock.qty;
+  const pnlPercent = (pnlValue / stock.totalInvest) * 100;
+
+  return {
     date: entry.date,
-    pnl: (entry.price - stock.avgPrice) * stock.qty,
-    pnlPercent: ((entry.price - stock.avgPrice) / stock.avgPrice * 100).toFixed(2),
-  }))
+    pnl: pnlValue,
+    pnlPercent: Number(pnlPercent.toFixed(2)),
+  };
+});
+
 
   // Buy/Sell distribution
-  const buyCount = stockTransactions.filter((t) => t.type === 'Buy').length
-  const sellCount = stockTransactions.filter((t) => t.type === 'Sell').length
+  const buyCount = stockTransactions.filter((t) => t.type === 'BUY').length
+  const sellCount = stockTransactions.filter((t) => t.type === 'SELL').length
   const transactionDistribution = [
     { name: 'Buy', value: buyCount, color: '#10b981' },
     { name: 'Sell', value: sellCount, color: '#ef4444' },
@@ -120,9 +168,7 @@ const PortfolioDetails = () => {
           <div className="bg-white rounded-xl shadow-md p-6">
             <p className="text-sm text-gray-600 mb-1">Stock Name</p>
             <p className="text-2xl font-bold text-gray-900">{stock.name}</p>
-            {stockInfo && (
-              <p className="text-xs text-gray-500 mt-1">{stockInfo.symbol} • {stockInfo.sector}</p>
-            )}
+
           </div>
           <div className="bg-white rounded-xl shadow-md p-6">
             <p className="text-sm text-gray-600 mb-1">Current Price</p>
@@ -343,14 +389,13 @@ const PortfolioDetails = () => {
                     tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
                   />
                   <Tooltip
-                    formatter={(value, name) => {
-                      if (name === 'pnl') {
-                        return [formatCurrency(value), 'P&L']
-                      }
-                      return [value + '%', 'P&L %']
+                    formatter={(value, name, props) => {
+                      const percent = props.payload.pnlPercent;
+                      return [`${formatCurrency(value)} (${percent}%)`, 'P&L'];
                     }}
                     labelFormatter={(label) => new Date(label).toLocaleDateString()}
                   />
+
                   <Legend />
                   <Bar dataKey="pnl" fill="#10b981" name="Profit/Loss" radius={[8, 8, 0, 0]} />
                 </BarChart>
@@ -460,18 +505,6 @@ const PortfolioDetails = () => {
                 {showHistory ? 'Hide History' : 'View Full History'}
               </button>
             </div>
-            {stockInfo && (
-              <div className="mt-6 pt-4 border-t space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Sector</span>
-                  <span className="font-semibold text-gray-900">{stockInfo.sector}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Symbol</span>
-                  <span className="font-semibold text-gray-900">{stockInfo.symbol}</span>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
