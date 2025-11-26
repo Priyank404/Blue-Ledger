@@ -3,12 +3,14 @@
   import StatCard from '../components/StatCard'
   import TransactionsTable from '../components/TransactionsTable'
   import { useTransactions } from '../context/TransactionContext'
-  import { portfolioData, portfolioValueHistory, assetAllocation } from '../data/dummyData'
+  import { portfolioValueHistory, assetAllocation } from '../data/dummyData'
   import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts'
+  import { useHoldings } from "../context/HoldingsContext";
 
   const Dashboard = () => {
 
     const {transactions, loding } = useTransactions();
+    const { holdings, loading } = useHoldings();
 
     const formatCurrency = (amount) => {
       return new Intl.NumberFormat('en-IN', {
@@ -17,6 +19,12 @@
         maximumFractionDigits: 0,
       }).format(amount)
     }
+    if (loading) return <DashboardLayout><p>Loading...</p></DashboardLayout>
+
+    const totalInvestment = holdings.reduce((sum, h) => sum + h.totalInvest, 0);
+    const totalValue = holdings.reduce((sum, h) => sum + h.currentValue, 0);
+    const totalPnl = holdings.reduce((sum, h) => sum + h.pnl, 0);
+
 
     return (
       <DashboardLayout>
@@ -30,24 +38,24 @@
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard
               title="Total Investment"
-              value={formatCurrency(portfolioData.totalInvestment)}
+              value={formatCurrency(totalInvestment)}
               icon="💰"
             />
             <StatCard
               title="Total Gain/Loss"
-              value={formatCurrency(portfolioData.totalGainLoss)}
-              subtitle={`${((portfolioData.totalGainLoss / portfolioData.totalInvestment) * 100).toFixed(2)}%`}
-              trend={portfolioData.totalGainLoss >= 0 ? 'up' : 'down'}
+              value={formatCurrency(totalPnl)}
+              subtitle={`${((totalPnl / totalInvestment) * 100).toFixed(2)}%`}
+              trend={totalPnl >= 0 ? 'up' : 'down'}
               icon="📈"
             />
             <StatCard
-              title="# of Stocks"
-              value={portfolioData.numberOfStocks}
+              title="Number of Stocks"
+              value={holdings.length}
               icon="📊"
             />
             <StatCard
               title="Portfolio Value"
-              value={formatCurrency(portfolioData.portfolioValue)}
+              value={formatCurrency(totalValue)}
               icon="💼"
             />
           </div>
