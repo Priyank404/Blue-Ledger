@@ -2,6 +2,7 @@ import express from 'express';
 import authRoutes from './Routes/authRoutes.js';
 import transactionRoutes from './Routes/transcationRoutes.js';
 import holdingsRoutes from './Routes/holdingsRoutes.js';
+import stockRoutes from './Routes/stocksRotues.js';
 import cookieParser from 'cookie-parser';
 import cors from "cors";
 
@@ -27,5 +28,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/transaction', transactionRoutes);
 app.use('/api/holdings', holdingsRoutes);
+app.use('/api/stock',stockRoutes)
 
 export default app;
