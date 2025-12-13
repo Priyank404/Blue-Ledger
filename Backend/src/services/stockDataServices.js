@@ -16,7 +16,14 @@ export const BulkPrice = async ({symbols})=>{
             symbols.map( symbol => nse.getEquityDetails(symbol))
         )
 
-        return result;
+        const finalData = result.map((item) => ({
+            symbol: item.info.symbol,
+            lastPrice: item.priceInfo.lastPrice,
+            sector: item.industryInfo.sector
+        }))
+
+
+        return finalData;
     } catch (error) {
         throw error;
     }
