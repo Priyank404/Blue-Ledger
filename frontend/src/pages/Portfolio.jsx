@@ -81,7 +81,7 @@ const valueChangePercent = previousValue > 0
 
   // Filter stock holdings
   const filteredHoldings = holdings.filter((holding) => {
-    const matchesSearch = holding.name.toLowerCase().includes(searchStock.toLowerCase())
+    const matchesSearch = holding.symbol.toLowerCase().includes(searchStock.toLowerCase())
     const matchesQty = (!minQty || holding.qty >= parseFloat(minQty)) &&
                       (!maxQty || holding.qty <= parseFloat(maxQty))
     const matchesPrice = (!minPrice || holding.currentPrice >= parseFloat(minPrice)) &&

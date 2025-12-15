@@ -63,7 +63,7 @@ const PortfolioDetails = () => {
   useEffect(() => {
     if (stock) {
       const filtered = transactions.filter(
-      (t) => t.name.toLowerCase() === stock.name.toLowerCase()
+      (t) => t.symbol === stock.symbol
     );
     setStockTransactionsList(filtered);
     }
@@ -81,8 +81,8 @@ const PortfolioDetails = () => {
   }
 
  const priceHistory =
-  stockPriceHistory[stock.name] && stockPriceHistory[stock.name].length > 0
-    ? stockPriceHistory[stock.name]
+  stockPriceHistory[stock.symbol] && stockPriceHistory[stock.symbol].length > 0
+    ? stockPriceHistory[stock.symbol]
     : generateFakePriceHistory(stock.currentPrice);
 
   const stockTransactions = stockTransactionsList
@@ -122,7 +122,7 @@ const PortfolioDetails = () => {
     avgBuyPrice: stock.avgPrice,
   }))
 
-  console.log("Price History For", stock.name, priceHistory);
+  console.log("Price History For", stock.symbol, priceHistory);
 
   // P&L calculation over time
   const pnlOverTime = priceHistory.map((entry) => {
@@ -152,8 +152,8 @@ const PortfolioDetails = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Portfolio Details: {stock.name}</h1>
-            <p className="text-gray-600">Detailed view of {stock.name} stock</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Portfolio Details: {stock.symbol}</h1>
+            <p className="text-gray-600">Detailed view of {stock.symbol} stock</p>
           </div>
           <Link
             to="/portfolio"
@@ -167,7 +167,7 @@ const PortfolioDetails = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-white rounded-xl shadow-md p-6">
             <p className="text-sm text-gray-600 mb-1">Stock Name</p>
-            <p className="text-2xl font-bold text-gray-900">{stock.name}</p>
+            <p className="text-2xl font-bold text-gray-900">{stock.symbol}</p>
 
           </div>
           <div className="bg-white rounded-xl shadow-md p-6">
@@ -512,7 +512,7 @@ const PortfolioDetails = () => {
         {showHistory && stockTransactions.length > 0 && (
           <div className="bg-white rounded-xl shadow-md p-6">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">
-              Transaction History for {stock.name}
+              Transaction History for {stock.symbol}
             </h3>
             <TransactionsTable 
               transactions={stockTransactions} 
