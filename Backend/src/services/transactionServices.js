@@ -128,14 +128,10 @@ async function updateHoldingSell({ portfolioId, name, quantity, price, date, ses
    --------------------------- */
 export const getTransactions = async ({ userId }) => {
   const portfolio = await Portfolio.findOne({ user: userId });
-  if (!portfolio) {
-    throw new ApiError(400, "Portfolio not found");
-  }
+  
 
   const transactions = await Transaction.find({ Portfolio: portfolio._id });
-  if (transactions.length === 0) {
-    throw new ApiError(400, "No Transaction found in this portfolio");
-  }
+  
 
   return transactions;
 };
