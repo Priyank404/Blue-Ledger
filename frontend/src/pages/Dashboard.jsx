@@ -25,8 +25,6 @@
     const totalValue = holdings.reduce((sum, h) => sum + h.currentValue, 0);
     const totalPnl = holdings.reduce((sum, h) => sum + h.pnl, 0);
 
-    console.log(totalInvestment, totalPnl, totalValue, holdings);
-
 
     return (
       <DashboardLayout>

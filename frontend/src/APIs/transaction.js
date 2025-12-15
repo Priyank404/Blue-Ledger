@@ -6,7 +6,7 @@ export const addTransaction = async (type, name, quantity, price, date) =>{
 }
 
 export const deleteTransaction = async (transactionId) => {
-    const response = await api.delete(`/transaction/delete/${transactionId}`);
+    const response = await api.delete(`/transaction/remove/${transactionId}`);
     return response.data
 }
 

@@ -11,6 +11,9 @@ export const TransactionProvider = ({ children }) => {
     try {
       setLoading(true);
       const data = await getTransactions();
+      if(data.length === 0){
+         setLoading(true);
+      }
 
       const structedData = data.map((t =>({
         id: t._id,
@@ -25,6 +28,7 @@ export const TransactionProvider = ({ children }) => {
       setTransactions(structedData);
     } catch (err) {
       console.error("Error fetching transactions", err);
+      setTransactions([]);
     } finally {
       setLoading(false);
     }
