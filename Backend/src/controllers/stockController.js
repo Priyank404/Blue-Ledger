@@ -9,7 +9,7 @@ export const getPrice = async (req, res, next)=>{
 
     if(!symbol){
         logger.error("error in fecting price as symbole not found")
-        ApiError(400,'symbol not found')
+       new ApiError(400,'symbol not found')
     }
     try {
         logger.info("getting price for stock")
@@ -27,10 +27,11 @@ export const getPrice = async (req, res, next)=>{
 };
 
 export const getPriceBulk = async (req, res, next) =>{
-    const symbols = req.body.symbols;
+    
+    const symbols = req.body;
     if(!symbols){
         logger.error("error in fecting price as symbol not found")
-        ApiError(400, "symbol not found")
+        new ApiError(400, "symbol not found")
     }
 
     try {
