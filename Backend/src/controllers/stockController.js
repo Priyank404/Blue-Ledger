@@ -18,7 +18,7 @@ export const getPrice = async (req, res, next)=>{
 
         logger.info("Get Price successful");
         res.status(200).json(
-            new ApiResponse(200, data.priceInfo.lastPrice, "success")
+            new ApiResponse(200, data, "success")
         )
     } catch (error) {
         logger.error("error while fetching the price of stock ",{error});

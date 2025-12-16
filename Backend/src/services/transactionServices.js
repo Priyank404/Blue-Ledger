@@ -3,6 +3,7 @@ import { Transaction } from "../models/transactionSchema.js";
 import { Portfolio } from "../models/portfolioSchema.js";
 import mongoose from "mongoose";
 import { Holdings } from "../models/holdingSchema.js";
+import { createPortfolioSnapshot } from "./portfolioSnapShotServices.js";
 import ApiError from "../utilities/apiError.js";
 
 /**
@@ -46,6 +47,8 @@ export const createTransaction = async ({ userId, type, name, quantity, price, d
 
     await session.commitTransaction();
     session.endSession();
+
+    createPortfolioSnapshot({ portfolioId: portfolio._id });
 
     return createdTx;
   } catch (error) {
