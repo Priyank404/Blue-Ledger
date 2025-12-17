@@ -1,6 +1,7 @@
 import logger from "../utilities/logger.js";
 import { Holdings } from "../models/holdingSchema.js";
 import { PortfolioSnapshot } from "../models/portfolioSnapshot.js";
+import { Portfolio } from "../models/portfolioSchema.js";
 import { BulkPrice } from "./stockDataServices.js"; // your NSE bulk price service
 
 export const createPortfolioSnapshot = async ({ portfolioId }) => {
@@ -52,4 +53,17 @@ export const createPortfolioSnapshot = async ({ portfolioId }) => {
     // IMPORTANT: snapshot must NEVER break transactions
     logger.error("Failed to create portfolio snapshot", { error });
   }
+};
+
+export const getPortfolioHistory = async ({ userId }) => {
+  const portfolio = await Portfolio.findOne({ user: userId });
+
+  if (!portfolio) return [];
+
+  const snapshots = await PortfolioSnapshot.find(
+    { portfolio: portfolio._id },
+    { date: 1, value: 1, _id: 0 }
+  ).sort({ date: 1 });
+
+  return snapshots;
 };

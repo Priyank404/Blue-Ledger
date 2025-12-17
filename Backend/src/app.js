@@ -3,6 +3,7 @@ import authRoutes from './Routes/authRoutes.js';
 import transactionRoutes from './Routes/transcationRoutes.js';
 import holdingsRoutes from './Routes/holdingsRoutes.js';
 import stockRoutes from './Routes/stocksRotues.js';
+import portfolioRoutes from './Routes/portfolioRoutes.js'
 import cookieParser from 'cookie-parser';
 import cors from "cors";
 
@@ -29,5 +30,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/transaction', transactionRoutes);
 app.use('/api/holdings', holdingsRoutes);
 app.use('/api/stock',stockRoutes)
+app.use('/api/portfolio', portfolioRoutes)
 
 export default app;
