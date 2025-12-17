@@ -11,6 +11,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
 import { TransactionProvider } from './context/TransactionContext'
 import { HoldingProvider } from './context/HoldingsContext'
+import { ChartProvider } from './context/ChartContext'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth()
@@ -80,9 +81,11 @@ function App() {
       <TransactionProvider>
         <HoldingProvider>
           <AuthProvider>
-            <Router>
-              <AppRoutes />
-            </Router>
+            <ChartProvider>
+              <Router>
+                <AppRoutes />
+              </Router>
+            </ChartProvider>
           </AuthProvider>
         </HoldingProvider>
       </TransactionProvider>

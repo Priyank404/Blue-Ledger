@@ -3,14 +3,27 @@
   import StatCard from '../components/StatCard'
   import TransactionsTable from '../components/TransactionsTable'
   import { useTransactions } from '../context/TransactionContext'
-  import { portfolioValueHistory, assetAllocation } from '../data/dummyData'
+  import {  assetAllocation } from '../data/dummyData'
   import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts'
+  import { useChart } from '../context/ChartContext'
   import { useHoldings } from "../context/HoldingsContext";
 
   const Dashboard = () => {
 
-    const {transactions, loding } = useTransactions();
-    const { holdings, loading } = useHoldings();
+  const {
+    portfolioHistory,
+    loading: chartLoading
+  } = useChart();
+
+  const {
+    transactions,
+    loading: transactionsLoading
+  } = useTransactions();
+
+  const {
+    holdings,
+    loading: holdingsLoading
+  } = useHoldings();
 
     const formatCurrency = (amount) => {
       return new Intl.NumberFormat('en-IN', {
@@ -19,7 +32,16 @@
         maximumFractionDigits: 0,
       }).format(amount)
     }
-    if (loading) return <DashboardLayout><p>Loading...</p></DashboardLayout>
+  const isDashboardLoading = chartLoading || holdingsLoading || transactionsLoading;
+
+  if (isDashboardLoading) {
+    return (
+      <DashboardLayout>
+        <p>Loading dashboard...</p>
+      </DashboardLayout>
+    );
+  }
+
 
     const totalInvestment = holdings.reduce((sum, h) => sum + h.totalInvest, 0);
     const totalValue = holdings.reduce((sum, h) => sum + h.currentValue, 0);
@@ -62,34 +84,49 @@
 
           {/* Overall Portfolio Graph */}
           <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Overall Portfolio Graph</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={portfolioValueHistory}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date" 
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                />
-                <YAxis 
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
-                />
-                <Tooltip 
-                  formatter={(value) => formatCurrency(value)}
-                  labelFormatter={(label) => new Date(label).toLocaleDateString()}
-                />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#3b82f6" 
-                  strokeWidth={2}
-                  name="Portfolio Value"
-                  dot={{ fill: '#3b82f6', r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Overall Portfolio Graph
+            </h2>
+
+            {chartLoading ? (
+              <p className="text-gray-500">Loading chart...</p>
+            ) : portfolioHistory.length === 0 ? (
+              <p className="text-gray-500">No portfolio history yet</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={portfolioHistory}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) =>
+                      new Date(value).toLocaleDateString("en-IN", {
+                        month: "short",
+                        day: "numeric",
+                      })
+                    }
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip
+                    formatter={(value) => formatCurrency(value)}
+                    labelFormatter={(label) =>
+                      new Date(label).toLocaleDateString()
+                    }
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    name="Portfolio Value"
+                    dot={{ r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
