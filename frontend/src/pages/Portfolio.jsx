@@ -42,7 +42,7 @@ const overallROI = totalInvestment > 0
 
 // Prepare P&L distribution chart data
 const pnlDistribution = holdings.map(h => ({
-  name: h.name,
+  name: h.symbol,
   pnl: h.pnl,
   pnlPercent: ((h.pnl / h.totalInvest) * 100).toFixed(2),
 }));
@@ -50,7 +50,7 @@ const pnlDistribution = holdings.map(h => ({
 // Prepare Value Allocation chart data
 const valueAllocation = holdings
   .map(h => ({
-    name: h.name,
+    name: h.symbol,
     value: h.currentValue,
     percentage: ((h.currentValue / totalValue) * 100).toFixed(1),
   }))
@@ -318,7 +318,7 @@ const valueChangePercent = previousValue > 0
                           {index + 1}
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-900">{stock.name}</p>
+                          <p className="font-semibold text-gray-900">{stock.symbol}</p>
                           <p className="text-sm text-gray-600">{stock.qty} shares</p>
                         </div>
                       </div>
@@ -358,7 +358,7 @@ const valueChangePercent = previousValue > 0
                           {index + 1}
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-900">{stock.name}</p>
+                          <p className="font-semibold text-gray-900">{stock.symbol}</p>
                           <p className="text-sm text-gray-600">{stock.qty} shares</p>
                         </div>
                       </div>
@@ -399,6 +399,7 @@ const valueChangePercent = previousValue > 0
           </ResponsiveContainer>
           <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
             {valueAllocation.slice(0, 4).map((item) => (
+
               <div key={item.name} className="p-3 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-600">{item.name}</p>
                 <p className="text-lg font-bold text-gray-900">{formatCurrency(item.value)}</p>
