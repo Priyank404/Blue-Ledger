@@ -1,13 +1,25 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { sectorAllocation, assetAllocation,portfolioValueHistory } from '../data/dummyData'
+import { sectorAllocation, assetAllocation } from '../data/dummyData'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts'
 import { useHoldings } from "../context/HoldingsContext";
+import { useChart } from '../context/ChartContext'
 
 const Portfolio = () => {
 
-  const { holdings, loading } = useHoldings();
+
+  const {
+    portfolioHistory,
+    loading: chartLoading
+  } = useChart();
+
+
+  const {
+    holdings,
+    loading: holdingsLoading
+  } = useHoldings();
+
   
 
 
@@ -28,9 +40,15 @@ const Portfolio = () => {
     }).format(amount)
   }
 
-  if (loading) return <DashboardLayout><p>Loading...</p></DashboardLayout>
+  const isPortfolioLoading = chartLoading || holdingsLoading ;
   
-  
+  if (isPortfolioLoading) {
+      return (
+        <DashboardLayout>
+          <p>Loading portfolio...</p>
+        </DashboardLayout>
+      );
+    }
 
   // Compute Portfolio Summary Values
 const totalInvestment = holdings.reduce((sum, h) => sum + h.totalInvest, 0);
@@ -192,7 +210,7 @@ const valueChangePercent = previousValue > 0
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Portfolio Growth Over Time</h2>
           <ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={portfolioValueHistory}>
+            <AreaChart data={portfolioHistory}>
               <defs>
                 <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
