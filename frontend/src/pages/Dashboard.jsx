@@ -14,6 +14,7 @@
     portfolioHistory,
     loading: chartLoading
   } = useChart();
+  
 
   const {
     transactions,
