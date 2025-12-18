@@ -533,7 +533,7 @@ const valueChangePercent = previousValue > 0
                         to={`/portfolio/${holding.id}`}
                         className="text-sm font-medium text-primary-600 hover:text-primary-700"
                       >
-                        {holding.name}
+                        {holding.symbol}
                       </Link>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{holding.qty}</td>
