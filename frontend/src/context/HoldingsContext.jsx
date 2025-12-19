@@ -10,6 +10,8 @@ export const HoldingProvider = ({ children }) => {
   const [holdings, setHoldings] = useState([]);
   const [loadingHoldings, setLoadingHoldings] = useState(true);
   const [loadingPrices, setLoadingPrices] = useState(false);
+  const [sectorAllocation, setSectorAllocation] = useState([]);
+
 
   /* ---------------------------
      1️⃣ Fetch holdings (DB)
@@ -19,7 +21,6 @@ export const HoldingProvider = ({ children }) => {
       try {
         setLoadingHoldings(true);
         const data = await getHoldings(); // always array
-
         setRawHoldings(data);
 
         // 👉 IMPORTANT: empty holdings is a VALID state
@@ -53,12 +54,16 @@ export const HoldingProvider = ({ children }) => {
         const symbols = rawHoldings.map(h => h.symbol);
         const priceResponse = await getPrice(symbols);
 
-        const priceMap = {};
+        const marketDataMap = {};
+
         priceResponse.data.forEach(p => {
-          priceMap[p.symbol] = p.lastPrice;
+          marketDataMap[p.symbol] ={
+            lastPrice: p.lastPrice,
+            sector: p.sector
+          };
         });
 
-        setPrices(priceMap);
+        setPrices(marketDataMap);
       } catch (err) {
         console.error("Error fetching prices", err);
         setPrices({});
@@ -70,6 +75,9 @@ export const HoldingProvider = ({ children }) => {
     fetchPrices();
   }, [rawHoldings]);
 
+  
+  
+
   /* ---------------------------
      3️⃣ Merge holdings + prices
      --------------------------- */
@@ -77,9 +85,16 @@ export const HoldingProvider = ({ children }) => {
     if (!rawHoldings.length) return;
 
     const merged = rawHoldings.map(h => {
-      const currentPrice = prices[h.symbol] || 0;
+
+      //destrctruing price for lastPrice and sectory
+      const market = prices[h.symbol] || {};
+      const currentPrice = market.lastPrice || 0;
+      const sector = market.sector || "Other";
+
       const qty = Number(h.Quantity);
       const avg = Number(h.avgBuyPrice);
+
+      
 
       return {
         id: h._id,
@@ -90,11 +105,41 @@ export const HoldingProvider = ({ children }) => {
         totalInvest: avg * qty,
         currentValue: currentPrice * qty,
         pnl: (currentPrice - avg) * qty,
+        sector
       };
     });
 
     setHoldings(merged);
   }, [rawHoldings, prices]);
+
+ 
+   //sector allocations
+
+  useEffect(() => {
+  if (!holdings.length) {
+    setSectorAllocation([]);
+    return;
+  }
+  const sectorMap = {};
+  let totalValue = 0;
+
+  holdings.forEach(h => {
+    totalValue += h.currentValue;
+    const sector = h.sector;
+    sectorMap[sector] =
+      (sectorMap[sector] || 0) + h.currentValue;
+  });
+
+  const allocation = Object.entries(sectorMap).map(
+    ([sector, value]) => ({
+      name: sector,
+      value: Number(((value / totalValue) * 100).toFixed(2))
+    })
+  );
+  setSectorAllocation(allocation);
+}, [holdings]);
+
+
 
   /* ---------------------------
      Final loading state
@@ -102,7 +147,7 @@ export const HoldingProvider = ({ children }) => {
   const loading = loadingHoldings || loadingPrices;
 
   return (
-    <HoldingContext.Provider value={{ holdings, loading }}>
+    <HoldingContext.Provider value={{ holdings, sectorAllocation, loading }}>
       {children}
     </HoldingContext.Provider>
   );

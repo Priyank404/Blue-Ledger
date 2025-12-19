@@ -1,10 +1,21 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
-import { sectorAllocation, assetAllocation } from '../data/dummyData'
+import {  assetAllocation } from '../data/dummyData'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts'
 import { useHoldings } from "../context/HoldingsContext";
 import { useChart } from '../context/ChartContext'
+
+
+//color for pie chart
+const COLORS = [
+  "#3b82f6",
+  "#22c55e",
+  "#f97316",
+  "#a855f7",
+  "#ef4444",
+  "#14b8a6"
+];
 
 const Portfolio = () => {
 
@@ -17,8 +28,11 @@ const Portfolio = () => {
 
   const {
     holdings,
+    sectorAllocation,
     loading: holdingsLoading
   } = useHoldings();
+
+
 
   
 
@@ -91,7 +105,6 @@ const valueChangePercent = previousValue > 0
 
 
 
-  const COLORS = sectorAllocation.map(s => s.color)
   const ASSET_COLORS = assetAllocation.map(a => a.color)
 
 
@@ -177,27 +190,40 @@ const valueChangePercent = previousValue > 0
                   data={sectorAllocation}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={({ sector, percent }) => `${sector}: ${(percent * 100).toFixed(0)}%`}
                   outerRadius={100}
-                  fill="#8884d8"
                   dataKey="value"
+                  label={false}
                 >
                   {sectorAllocation.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <Cell
+                      key={index}
+                      fill={COLORS[index %COLORS.length]}
+                    />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip formatter={(value) => `${value}%`} />
+                <Legend
+                  layout="horizontal"
+                  verticalAlign="bottom"
+                  align="center"
+                  iconType="circle"
+                  wrapperStyle={{
+                    fontSize: "12px",
+                    paddingTop: "10px"
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
 
+
+        {/* extra sector chart temp will be replaced */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Sector Allocation (Bar Chart)</h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={sectorAllocation}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="sector" />
+                <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
                 <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
