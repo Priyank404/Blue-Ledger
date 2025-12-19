@@ -11,7 +11,8 @@ export const getStockPrice= async ({symbol})=>{
 }
 
 export const BulkPrice = async ({symbols})=>{
-    try {
+    try {     
+    
         const result = await Promise.all(
             symbols.map( symbol => nse.getEquityDetails(symbol))
         )
