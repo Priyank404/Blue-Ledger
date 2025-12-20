@@ -11,6 +11,8 @@ export const HoldingProvider = ({ children }) => {
   const [loadingHoldings, setLoadingHoldings] = useState(true);
   const [loadingPrices, setLoadingPrices] = useState(false);
   const [sectorAllocation, setSectorAllocation] = useState([]);
+  const [sectorProfit, setSectorProfit] = useState([]);
+
 
 
   /* ---------------------------
@@ -139,6 +141,33 @@ export const HoldingProvider = ({ children }) => {
   setSectorAllocation(allocation);
 }, [holdings]);
 
+//secotr wise profit
+
+useEffect(() => {
+  if (!holdings.length) {
+    setSectorProfit([]);
+    return;
+  }
+
+  const profitMap = {};
+
+  holdings.forEach(h => {
+    const sector = h.sector || "Other";
+    profitMap[sector] =
+      (profitMap[sector] || 0) + h.pnl;
+  });
+
+  const result = Object.entries(profitMap).map(
+    ([sector, profit]) => ({
+      sector,
+      profit: Number(profit.toFixed(2))
+    })
+  );
+
+  setSectorProfit(result);
+}, [holdings]);
+
+
 
 
   /* ---------------------------
@@ -147,7 +176,7 @@ export const HoldingProvider = ({ children }) => {
   const loading = loadingHoldings || loadingPrices;
 
   return (
-    <HoldingContext.Provider value={{ holdings, sectorAllocation, loading }}>
+    <HoldingContext.Provider value={{ holdings, sectorAllocation, sectorProfit, loading }}>
       {children}
     </HoldingContext.Provider>
   );

@@ -29,6 +29,7 @@ const Portfolio = () => {
   const {
     holdings,
     sectorAllocation,
+    sectorProfit,
     loading: holdingsLoading
   } = useHoldings();
 
@@ -219,16 +220,59 @@ const valueChangePercent = previousValue > 0
 
         {/* extra sector chart temp will be replaced */}
           <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Sector Allocation (Bar Chart)</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={sectorAllocation}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Sector Wise Profit/Loss</h2>
+           <ResponsiveContainer width="100%" height={320}>
+  <BarChart
+    data={[...sectorProfit].sort((a, b) => b.profit - a.profit)}
+    margin={{ top: 20, right: 20, left: 10, bottom: 40 }}
+  >
+    {/* Soft grid */}
+    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+
+    {/* X Axis */}
+    <XAxis
+      dataKey="sector"
+      tick={{ fontSize: 12, fill: "#374151" }}
+      angle={-20}
+      textAnchor="end"
+      interval={0}
+    />
+
+    {/* Y Axis */}
+    <YAxis
+      tick={{ fontSize: 12, fill: "#374151" }}
+      tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
+    />
+
+    {/* Tooltip */}
+    <Tooltip
+      formatter={(value) =>
+        `₹${Number(value).toLocaleString()}`
+      }
+      cursor={{ fill: "rgba(59,130,246,0.08)" }}
+      contentStyle={{
+        borderRadius: "8px",
+        border: "1px solid #e5e7eb",
+        fontSize: "13px"
+      }}
+    />
+
+    {/* Bars */}
+    <Bar
+      dataKey="profit"
+      radius={[6, 6, 0, 0]}
+      isAnimationActive
+    >
+      {sectorProfit.map((entry, index) => (
+        <Cell
+          key={index}
+          fill={entry.profit >= 0 ? "#22c55e" : "#ef4444"}
+        />
+      ))}
+    </Bar>
+  </BarChart>
+</ResponsiveContainer>
+
           </div>
         </div>
 
