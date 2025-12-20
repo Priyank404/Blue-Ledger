@@ -10,6 +10,10 @@ import { useHoldings } from "../context/HoldingsContext"
 import { useTransactions } from "../context/TransactionContext";
 
 const generateFakePriceHistory = (currentPrice, days = 7) => {
+
+  
+
+
   const history = [];
   for (let i = days; i > 0; i--) {
     const date = new Date();
@@ -28,6 +32,7 @@ const generateFakePriceHistory = (currentPrice, days = 7) => {
 
 const PortfolioDetails = () => {
   const { id } = useParams()
+  const [priceHistory, setPriceHistory] = useState([]);
 
  const { holdings, loading } = useHoldings();
  const { transactions, loading: transactionsLoading } = useTransactions();
@@ -69,6 +74,22 @@ const PortfolioDetails = () => {
     }
   }, [stock, transactions])
 
+  //fetching price of stock
+
+  useEffect(() => {
+  if (!stock) return;
+
+  fetch(`/api/stocks/${stock.symbol}/history`)
+    .then(res => res.json())
+    .then(res => {
+      // backend returns [{ date, price }]
+      setPriceHistory(res.data || []);
+    })
+    .catch(() => setPriceHistory([]));
+}, [stock]);
+
+
+
 
   const handleDeleteTransaction = async (transactionId) => {
     try {
@@ -80,10 +101,7 @@ const PortfolioDetails = () => {
     }
   }
 
- const priceHistory =
-  stockPriceHistory[stock.symbol] && stockPriceHistory[stock.symbol].length > 0
-    ? stockPriceHistory[stock.symbol]
-    : generateFakePriceHistory(stock.currentPrice);
+ 
 
   const stockTransactions = stockTransactionsList
   
@@ -121,8 +139,6 @@ const PortfolioDetails = () => {
     currentPrice: entry.price,
     avgBuyPrice: stock.avgPrice,
   }))
-
-  console.log("Price History For", stock.symbol, priceHistory);
 
   // P&L calculation over time
   const pnlOverTime = priceHistory.map((entry) => {
@@ -260,8 +276,8 @@ const PortfolioDetails = () => {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-                <p className="text-gray-500">No price history available</p>
+             <div className="h-64 flex items-center justify-center text-gray-500">
+                Price history will appear after market close
               </div>
             )}
           </div>
