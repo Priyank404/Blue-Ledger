@@ -57,7 +57,7 @@ export const getStockHistoryController = async(req, res, next) =>{
     try {
         logger.info("getting stock history")
 
-        const data = getStockHistory({symbol});
+        const data = await getStockHistory({symbol});
 
         logger.info("Get stock history successful");
         res.status(200).json(
