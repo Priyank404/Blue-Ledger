@@ -1,14 +1,37 @@
+import dayjs from "dayjs";
+import customParseFormat from "dayjs/plugin/customParseFormat.js";
 import { NseIndia } from "stock-nse-india";
 const nse = new NseIndia();
 
-export const getStockPrice= async ({symbol})=>{
-    try {
-        const result = await nse.getEquityDetails(symbol)
-        return result;
-    } catch (error) {
-        throw error;
-    }
-}
+
+
+dayjs.extend(customParseFormat);
+
+export const getStockPrice = async ({ symbol }) => {
+  try {
+    const result = await nse.getEquityDetails(symbol);
+
+    const rawDate = result.preOpenMarket.lastUpdateTime; 
+    // "23-Dec-2025 09:07:16"
+
+    const isoDate = dayjs(
+      rawDate,
+      "DD-MMM-YYYY HH:mm:ss"
+    ).toISOString();
+
+    return [
+      {
+        date: isoDate,                    // ✅ chart-safe
+        price: result.priceInfo.lastPrice // ✅ frontend expects this
+      }
+    ];
+  } catch (error) {
+    throw error;
+  }
+};
+
+
+
 
 export const BulkPrice = async ({symbols})=>{
     try {     
