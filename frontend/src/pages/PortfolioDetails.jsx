@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect,useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
 import {  stockPriceHistory } from '../data/dummyData'
@@ -9,27 +9,6 @@ import { deleteTransaction } from '../APIs/transaction'
 import { useHoldings } from "../context/HoldingsContext"
 import { useTransactions } from "../context/TransactionContext";
 
-const generateFakePriceHistory = (currentPrice, days = 7) => {
-
-  
-
-
-  const history = [];
-  for (let i = days; i > 0; i--) {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-
-    const priceVariation = (Math.random() * 4) - 2; // -2 to +2 random price
-    history.push({
-      date: date.toISOString(),
-      price: Math.max(1, currentPrice + priceVariation)
-    });
-  }
-  return history;
-};
-
-
-
 const PortfolioDetails = () => {
   const { id } = useParams()
   const [priceHistory, setPriceHistory] = useState([]);
@@ -37,12 +16,72 @@ const PortfolioDetails = () => {
  const { holdings, loading } = useHoldings();
  const { transactions, loading: transactionsLoading } = useTransactions();
 
- if (loading || transactionsLoading) {
-  return <DashboardLayout><p>Loading...</p></DashboardLayout>;
-  }
- 
- const stock = holdings.find(h => h.id === id);
+  const [showHistory, setShowHistory] = useState(false)
+  const [stockTransactionsList, setStockTransactionsList] = useState([])
+  const { showNotification } = useNotification()
 
+   const stockTransactions = stockTransactionsList
+
+
+//getting stock id
+  const stock = useMemo(() => {
+    return holdings.find(h => h.id === id);
+  }, [holdings, id]);
+
+
+//filtering stock
+  useEffect(() => {
+  if (stock) {
+    const filtered = transactions.filter(
+    (t) => t.symbol === stock.symbol
+  );
+  setStockTransactionsList(filtered);
+  }
+}, [stock, transactions])
+
+  //fetching price of stock
+
+
+useEffect(() => {
+  if (!stock) return;
+
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/stock/${stock.symbol}/price`,
+        {
+          credentials: "include", // 🔥 THIS IS REQUIRED
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(`HTTP error ${res.status}`);
+      }
+
+      const data = await res.json(); // ✅ IMPORTANT
+      console.log("PRICE DATA:", data);
+
+      setPriceHistory(data.data || []); // depends on your backend response
+    } catch (err) {
+      console.error("Error fetching price history", err);
+      setPriceHistory([]);
+    }
+  };
+
+  fetchHistory();
+}, [stock]);
+
+
+
+//loading screen if the stock is loading
+if (loading || transactionsLoading) {
+    return <DashboardLayout><p>Loading...</p></DashboardLayout>;
+  }
+
+  
+ 
+
+// loading screen if stock not found
  if (!stock) {
     return (
       <DashboardLayout>
@@ -56,56 +95,7 @@ const PortfolioDetails = () => {
     )
   }
 
-
-  const [showHistory, setShowHistory] = useState(false)
-  const [stockTransactionsList, setStockTransactionsList] = useState([])
-  const { showNotification } = useNotification()
-
-  
-  
-
-
-  useEffect(() => {
-    if (stock) {
-      const filtered = transactions.filter(
-      (t) => t.symbol === stock.symbol
-    );
-    setStockTransactionsList(filtered);
-    }
-  }, [stock, transactions])
-
-  //fetching price of stock
-
-  useEffect(() => {
-  if (!stock) return;
-
-  fetch(`/api/stocks/${stock.symbol}/history`)
-    .then(res => res.json())
-    .then(res => {
-      // backend returns [{ date, price }]
-      setPriceHistory(res.data || []);
-    })
-    .catch(() => setPriceHistory([]));
-}, [stock]);
-
-
-
-
-  const handleDeleteTransaction = async (transactionId) => {
-    try {
-      const response = await deleteTransaction(transactionId)
-      showNotification(response.message || 'Transaction deleted successfully', 'success')
-      setStockTransactionsList((prev) => prev.filter((t) => t.id !== transactionId))
-    } catch (error) {
-      showNotification(error.response?.data?.message || 'Failed to delete transaction', 'error')
-    }
-  }
-
- 
-
-  const stockTransactions = stockTransactionsList
-  
-  // Calculate additional metrics
+    // Calculate additional metrics
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -162,6 +152,42 @@ const PortfolioDetails = () => {
   ]
 
   const COLORS = ['#10b981', '#ef4444']
+
+  
+
+
+  
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  const handleDeleteTransaction = async (transactionId) => {
+    try {
+      const response = await deleteTransaction(transactionId)
+      showNotification(response.message || 'Transaction deleted successfully', 'success')
+      setStockTransactionsList((prev) => prev.filter((t) => t.id !== transactionId))
+    } catch (error) {
+      showNotification(error.response?.data?.message || 'Failed to delete transaction', 'error')
+    }
+  }
+
+ 
+
+ 
+  
+
+
+  
+ 
 
   return (
     <DashboardLayout>
