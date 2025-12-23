@@ -1,7 +1,7 @@
 import { useState, useEffect,useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
-import {  stockPriceHistory } from '../data/dummyData'
+
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 import TransactionsTable from '../components/TransactionsTable'
 import { useNotification } from '../context/NotificationContext'
@@ -11,7 +11,8 @@ import { useTransactions } from "../context/TransactionContext";
 
 const PortfolioDetails = () => {
   const { id } = useParams()
-  const [priceHistory, setPriceHistory] = useState([]);
+  const [livePrice, setlivePrice] = useState([]);
+  const [PriceHistory, setPriceHistory] = useState([]);
 
  const { holdings, loading } = useHoldings();
  const { transactions, loading: transactionsLoading } = useTransactions();
@@ -33,7 +34,7 @@ const PortfolioDetails = () => {
   useEffect(() => {
   if (stock) {
     const filtered = transactions.filter(
-    (t) => t.symbol === stock.symbol
+    (t) => t.name === stock.symbol
   );
   setStockTransactionsList(filtered);
   }
@@ -45,7 +46,7 @@ const PortfolioDetails = () => {
 useEffect(() => {
   if (!stock) return;
 
-  const fetchHistory = async () => {
+  const fetchLive = async () => {
     try {
       const res = await fetch(
         `http://localhost:5000/api/stock/${stock.symbol}/price`,
@@ -59,7 +60,35 @@ useEffect(() => {
       }
 
       const data = await res.json(); // ✅ IMPORTANT
-      console.log("PRICE DATA:", data);
+
+      setlivePrice(data.data || []); // depends on your backend response
+    } catch (err) {
+      console.error("Error fetching price history", err);
+      setlivePrice([]);
+    }
+  };
+
+  fetchLive();
+}, [stock]);
+
+//fetching history of the price 
+useEffect(() => {
+  if (!stock) return;
+
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:5000/api/stock/${stock.symbol}/history`,
+        {
+          credentials: "include", // 🔥 THIS IS REQUIRED
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error(`HTTP error ${res.status}`);
+      }
+
+      const data = await res.json(); // ✅ IMPORTANT
 
       setPriceHistory(data.data || []); // depends on your backend response
     } catch (err) {
@@ -109,13 +138,13 @@ if (loading || transactionsLoading) {
   const roi = ((stock.currentValue - stock.totalInvest) / stock.totalInvest * 100).toFixed(2)
   
   // Calculate price change (from last price in history)
-  const lastPrice = priceHistory.length > 0 ? priceHistory[priceHistory.length - 1].price : stock.currentPrice
-  const prevPrice = priceHistory.length > 1 ? priceHistory[priceHistory.length - 2].price : stock.currentPrice
+  const lastPrice = livePrice.length > 0 ? livePrice[livePrice.length - 1].price : stock.currentPrice
+  const prevPrice = livePrice.length > 1 ? livePrice[livePrice.length - 2].price : stock.currentPrice
   const dayChange = lastPrice - prevPrice
   const dayChangePercent = prevPrice > 0 ? ((dayChange / prevPrice) * 100).toFixed(2) : '0.00'
 
   // Prepare data for value over time chart
-  const valueOverTime = priceHistory.map((entry) => ({
+  const valueOverTime = livePrice.map((entry) => ({
     date: entry.date,
     price: entry.price,
     value: entry.price * stock.qty,
@@ -124,14 +153,14 @@ if (loading || transactionsLoading) {
   }))
 
   // Prepare data for price comparison chart
-  const priceComparisonData = priceHistory.map((entry) => ({
+  const priceComparisonData = livePrice.map((entry) => ({
     date: entry.date,
     currentPrice: entry.price,
     avgBuyPrice: stock.avgPrice,
   }))
 
   // P&L calculation over time
-  const pnlOverTime = priceHistory.map((entry) => {
+  const pnlOverTime = livePrice.map((entry) => {
   const pnlValue = (entry.price - stock.avgPrice) * stock.qty;
   const pnlPercent = (pnlValue / stock.totalInvest) * 100;
 
@@ -266,9 +295,9 @@ if (loading || transactionsLoading) {
           {/* Stock Price History */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Price History</h2>
-            {priceHistory.length > 0 ? (
+            {PriceHistory.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={priceHistory}>
+                <AreaChart data={PriceHistory}>
                   <defs>
                     <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
