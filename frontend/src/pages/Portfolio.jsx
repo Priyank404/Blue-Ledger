@@ -47,6 +47,7 @@ const Portfolio = () => {
   const [minPnl, setMinPnl] = useState('')
   const [maxPnl, setMaxPnl] = useState('')
   const [pnlFilter, setPnlFilter] = useState('') // 'profit', 'loss', or ''
+  const [showFilters, setShowFilters] = useState(false)
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -501,15 +502,26 @@ const valueChangePercent = previousValue > 0
         <div className="bg-white rounded-xl shadow-md p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">Stock Holdings</h2>
-            <button 
-              onClick={clearFilters}
-              className="text-primary-600 hover:text-primary-700 font-semibold text-sm"
-            >
-              Clear Filters
-            </button>
+            <div className="flex gap-2">
+              {showFilters && (
+                <button 
+                  onClick={clearFilters}
+                  className="px-4 py-2 text-sm text-primary-600 hover:text-primary-700 font-semibold"
+                >
+                  Clear Filters
+                </button>
+              )}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+              >
+                {showFilters ? 'Hide Filters' : 'Show Filters'}
+              </button>
+            </div>
           </div>
 
           {/* Filters for Stock Holdings */}
+          {showFilters && (
           <div className="mb-6 p-4 bg-gray-50 rounded-lg space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
@@ -598,6 +610,7 @@ const valueChangePercent = previousValue > 0
               </div>
             </div>
           </div>
+          )}
 
           <div className="overflow-x-auto">
             <table className="w-full">

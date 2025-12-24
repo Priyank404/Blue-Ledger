@@ -17,6 +17,7 @@ const Transactions = () => {
   const [price, setPrice] = useState('')
   const [date, setDate] = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
   const [transactionsList, setTransactionsList] = useState(transactions)
   const { showNotification } = useNotification()
   
@@ -105,15 +106,27 @@ const Transactions = () => {
             <>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
-                <button
-                  onClick={clearFilters}
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                >
-                  Clear All
-                </button>
+                <div className="flex gap-2">
+                  {showFilters && (
+                    <button
+                      onClick={clearFilters}
+                      className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
+                  >
+                    {showFilters ? 'Hide Filters' : 'Show Filters'}
+                  </button>
+                </div>
               </div>
 
               {/* Basic Filters */}
+              {showFilters && (
+                <>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Search Stock</label>
@@ -223,6 +236,8 @@ const Transactions = () => {
               />
             </div>
           </div>
+                </>
+              )}
             </>
           )}
 
