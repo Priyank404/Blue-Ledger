@@ -166,7 +166,7 @@ if (loading || transactionsLoading) {
 
   return {
     date: entry.date,
-    pnl: pnlValue,
+    pnl: Number(pnlValue),
     pnlPercent: Number(pnlPercent.toFixed(2)),
   };
 });
@@ -468,7 +468,14 @@ if (loading || transactionsLoading) {
                   />
 
                   <Legend />
-                  <Bar dataKey="pnl" fill="#10b981" name="Profit/Loss" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="pnl" name="Profit/Loss" radius={[8, 8, 0, 0]}>
+                    {pnlOverTime.map((entry, index) => (
+                      <Cell
+                        key={index}
+                        fill={entry.pnl > 0 ? "#22c55e" : "#ef4444"}
+                      />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (

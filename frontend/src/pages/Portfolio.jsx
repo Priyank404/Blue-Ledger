@@ -92,8 +92,18 @@ const valueAllocation = holdings
 
 // Top Performers & Losers
 const sortedHoldings = [...holdings].sort((a, b) => b.pnl - a.pnl);
-const topPerformers = sortedHoldings.slice(0, 3).filter(h => h.pnl > 0);
-const topLosers = sortedHoldings.slice(-3).reverse();
+const profitStocks = sortedHoldings.filter(h => h.pnl > 0);
+const lossStocks = sortedHoldings.filter(h => h.pnl < 0);
+const neutralStocks = sortedHoldings.filter(h => h.pnl === 0);
+
+
+const topPerformers = [
+  ...profitStocks.slice(0, 3),
+  ...neutralStocks.slice(0, Math.max(0, 3 - profitStocks.length))
+];
+
+const topLosers = lossStocks.slice(-3).reverse();
+
 
 // Portfolio Value Change (use your actual holdings data)
 const latestValue = totalValue;
@@ -219,60 +229,60 @@ const valueChangePercent = previousValue > 0
           </div>
 
 
-        {/* extra sector chart temp will be replaced */}
+        {/* Sector Wise Profit/Loss */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Sector Wise Profit/Loss</h2>
            <ResponsiveContainer width="100%" height={320}>
-  <BarChart
-    data={[...sectorProfit].sort((a, b) => b.profit - a.profit)}
-    margin={{ top: 20, right: 20, left: 10, bottom: 40 }}
-  >
-    {/* Soft grid */}
-    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <BarChart
+                data={sectorProfit}
+                margin={{ top: 20, right: 20, left: 10, bottom: 40 }}
+              >
+                {/* Soft grid */}
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
 
-    {/* X Axis */}
-    <XAxis
-      dataKey="sector"
-      tick={{ fontSize: 12, fill: "#374151" }}
-      angle={-20}
-      textAnchor="end"
-      interval={0}
-    />
+                {/* X Axis */}
+                <XAxis
+                  dataKey="sector"
+                  tick={{ fontSize: 12, fill: "#374151" }}
+                  angle={-20}
+                  textAnchor="end"
+                  interval={0}
+                />
 
-    {/* Y Axis */}
-    <YAxis
-      tick={{ fontSize: 12, fill: "#374151" }}
-      tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
-    />
+                {/* Y Axis */}
+                <YAxis
+                  tick={{ fontSize: 12, fill: "#374151" }}
+                  tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
+                />
 
-    {/* Tooltip */}
-    <Tooltip
-      formatter={(value) =>
-        `₹${Number(value).toLocaleString()}`
-      }
-      cursor={{ fill: "rgba(59,130,246,0.08)" }}
-      contentStyle={{
-        borderRadius: "8px",
-        border: "1px solid #e5e7eb",
-        fontSize: "13px"
-      }}
-    />
+                {/* Tooltip */}
+                <Tooltip
+                  formatter={(value) =>
+                    `₹${Number(value).toLocaleString()}`
+                  }
+                  cursor={{ fill: "rgba(59,130,246,0.08)" }}
+                  contentStyle={{
+                    borderRadius: "8px",
+                    border: "1px solid #e5e7eb",
+                    fontSize: "13px"
+                  }}
+                />
 
-    {/* Bars */}
-    <Bar
-      dataKey="profit"
-      radius={[6, 6, 0, 0]}
-      isAnimationActive
-    >
-      {sectorProfit.map((entry, index) => (
-        <Cell
-          key={index}
-          fill={entry.profit >= 0 ? "#22c55e" : "#ef4444"}
-        />
-      ))}
-    </Bar>
-  </BarChart>
-</ResponsiveContainer>
+                {/* Bars */}
+                <Bar
+                  dataKey="profit"
+                  radius={[6, 6, 0, 0]}
+                  isAnimationActive
+                >
+                  {sectorProfit.map((entry, index) => (
+                    <Cell
+                      key={index}
+                      fill={entry.profit >= 0 ? "#22c55e" : "#ef4444"}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
 
           </div>
         </div>
