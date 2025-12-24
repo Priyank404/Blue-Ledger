@@ -14,7 +14,7 @@ import globalErrorHandler from './middleWares/globalApiError.js';
 
 const app = express();
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: ["http://localhost:5173", "https://portfolio-tracker-two-ruby.vercel.app"],
   credentials: true // because you're using cookies
 }));
 
