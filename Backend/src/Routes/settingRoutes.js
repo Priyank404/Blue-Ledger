@@ -4,6 +4,6 @@ import { updateProfile } from "../controllers/settingController.js";
 
 const router = Router()
 
-router.post('/changes',verifyJWT, updateProfile);
+router.patch('/profile',verifyJWT, updateProfile);
 
 export default router

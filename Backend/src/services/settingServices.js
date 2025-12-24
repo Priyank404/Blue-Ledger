@@ -6,10 +6,11 @@ import mongoose from "mongoose";
 export const updateProfileService = async (
   userId,
   email,
+  currentPassword,
   newPassword,
-  currentPassword
 ) => {
   // 1️⃣ Validate userId
+  
   if (!mongoose.Types.ObjectId.isValid(userId)) {
     throw new ApiError(400, "Invalid user ID");
   }

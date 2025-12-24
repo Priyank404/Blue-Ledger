@@ -59,7 +59,7 @@ export const logIn = async (req, res, next) =>{
         )
     } catch (error) {
         logger.error("Error while logging in user", {error});
-        next(error.message);
+        next(error);
     }
 }
 

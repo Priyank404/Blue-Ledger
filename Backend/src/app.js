@@ -7,6 +7,7 @@ import portfolioRoutes from './Routes/portfolioRoutes.js'
 import settingRoutes from './Routes/settingRoutes.js'
 import cookieParser from 'cookie-parser';
 import cors from "cors";
+import globalErrorHandler from './middleWares/globalApiError.js';
 
 
 
@@ -32,6 +33,8 @@ app.use('/api/transaction', transactionRoutes);
 app.use('/api/holdings', holdingsRoutes);
 app.use('/api/stock',stockRoutes)
 app.use('/api/portfolio', portfolioRoutes)
-app.use('/api/user', settingRoutes)
+app.use('/api/users', settingRoutes)
+
+app.use(globalErrorHandler)
 
 export default app;
