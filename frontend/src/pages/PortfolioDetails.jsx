@@ -1,7 +1,7 @@
 import { useState, useEffect,useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
-
+import api from '../APIs/axios'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell } from 'recharts'
 import TransactionsTable from '../components/TransactionsTable'
 import { useNotification } from '../context/NotificationContext'
@@ -49,7 +49,7 @@ useEffect(() => {
   const fetchLive = async () => {
     try {
       const res = await fetch(
-        `http://localhost:5000/api/stock/${stock.symbol}/price`,
+        `${import.meta.env.VITE_API_URL}/api/stock/${stock.symbol}/price`,
         {
           credentials: "include", // 🔥 THIS IS REQUIRED
         }
@@ -78,7 +78,7 @@ useEffect(() => {
   const fetchHistory = async () => {
     try {
       const res = await fetch(
-        `http://localhost:5000/api/stock/${stock.symbol}/history`,
+        `${import.meta.env.VITE_API_URL}/api/stock/${stock.symbol}/history`,
         {
           credentials: "include", // 🔥 THIS IS REQUIRED
         }
