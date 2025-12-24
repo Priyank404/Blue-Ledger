@@ -4,35 +4,54 @@ import DashboardLayout from "../layouts/DashboardLayout"
 const Settings = () => {
   // Account state
   const [email, setEmail] = useState("user@example.com")
-  const [password, setPassword] = useState("")
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
 
-  // Preferences state
+  // Preferences state (handled separately)
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [smsNotifications, setSmsNotifications] = useState(false)
 
-  // Save handler (React function)
   const handleSaveChanges = () => {
-    // Password validation
-    if (password && password !== confirmPassword) {
-      setError("Password and Confirm Password do not match")
+    // 1️⃣ Require current password for any account change
+    if (!currentPassword) {
+      setError("Current password is required")
+      return
+    }
+
+    // 2️⃣ New password validation
+    if (newPassword && newPassword !== confirmPassword) {
+      setError("New password and confirm password do not match")
+      return
+    }
+
+    // 3️⃣ At least one field must be updated
+    if (!email && !newPassword) {
+      setError("Please update email or password")
       return
     }
 
     setError("")
 
-    // Final payload (send to backend later)
-    const updatedSettings = {
-      email,
-      password: password || null,
-      preferences: {
-        emailNotifications,
-        smsNotifications
-      }
+    // 4️⃣ Account payload (ONLY what backend needs)
+    const accountPayload = {
+      currentPassword,
     }
 
-    console.log("Updated Settings:", updatedSettings)
+    if (email) accountPayload.email = email
+    if (newPassword) accountPayload.newPassword = newPassword
+
+    console.log("Account Payload:", accountPayload)
+
+    // 5️⃣ Preferences payload (separate API later)
+    const preferencesPayload = {
+      emailNotifications,
+      smsNotifications,
+    }
+
+    console.log("Preferences Payload:", preferencesPayload)
+
     alert("Settings saved successfully")
   }
 
@@ -69,24 +88,38 @@ const Settings = () => {
               />
             </div>
 
-            {/* Password */}
+            {/* Current Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                Current Password
               </label>
               <input
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter new password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter current password"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
               />
             </div>
 
-            {/* Confirm Password */}
+            {/* New Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password
+                New Password
+              </label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (optional)"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
+              />
+            </div>
+
+            {/* Confirm New Password */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Confirm New Password
               </label>
               <input
                 type="password"
@@ -97,7 +130,6 @@ const Settings = () => {
               />
             </div>
 
-            {/* Error message */}
             {error && (
               <p className="text-sm text-red-600 font-medium">
                 {error}
@@ -106,14 +138,13 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* Preferences */}
+        {/* Preferences (separate concern) */}
         <div className="bg-white rounded-xl shadow-md p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Preferences
           </h2>
 
           <div className="space-y-4">
-            {/* Email Notifications */}
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-gray-900">
@@ -131,7 +162,6 @@ const Settings = () => {
               />
             </div>
 
-            {/* SMS Notifications */}
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-gray-900">
@@ -151,15 +181,12 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* Save Button */}
-        <div>
-          <button
-            onClick={handleSaveChanges}
-            className="px-6 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
-          >
-            Save Changes
-          </button>
-        </div>
+        <button
+          onClick={handleSaveChanges}
+          className="px-6 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+        >
+          Save Changes
+        </button>
       </div>
     </DashboardLayout>
   )
