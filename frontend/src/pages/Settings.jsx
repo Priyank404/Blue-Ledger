@@ -1,59 +1,72 @@
 import { useState } from "react"
 import DashboardLayout from "../layouts/DashboardLayout"
+import { updateProfile } from "../APIs/profile"
+import { useNotification } from "../context/NotificationContext"
 
 const Settings = () => {
   // Account state
-  const [email, setEmail] = useState("user@example.com")
+  const [email, setEmail] = useState("")
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
 
+  //notification
+  const { showNotification } = useNotification();
+
+
   // Preferences state (handled separately)
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [smsNotifications, setSmsNotifications] = useState(false)
 
-  const handleSaveChanges = () => {
-    // 1️⃣ Require current password for any account change
-    if (!currentPassword) {
-      setError("Current password is required")
-      return
-    }
-
-    // 2️⃣ New password validation
-    if (newPassword && newPassword !== confirmPassword) {
-      setError("New password and confirm password do not match")
-      return
-    }
-
-    // 3️⃣ At least one field must be updated
-    if (!email && !newPassword) {
-      setError("Please update email or password")
-      return
-    }
-
-    setError("")
-
-    // 4️⃣ Account payload (ONLY what backend needs)
-    const accountPayload = {
-      currentPassword,
-    }
-
-    if (email) accountPayload.email = email
-    if (newPassword) accountPayload.newPassword = newPassword
-
-    console.log("Account Payload:", accountPayload)
-
-    // 5️⃣ Preferences payload (separate API later)
-    const preferencesPayload = {
-      emailNotifications,
-      smsNotifications,
-    }
-
-    console.log("Preferences Payload:", preferencesPayload)
-
-    alert("Settings saved successfully")
+  const handleSaveChanges = async () => {
+  // 1️⃣ Require current password
+  if (!currentPassword) {
+    setError("Current password is required");
+    return;
   }
+
+  // 2️⃣ Validate new password
+  if (newPassword && newPassword !== confirmPassword) {
+    setError("New password and confirm password do not match");
+    return;
+  }
+
+  if (currentPassword == newPassword) {
+    setError("New password cannot be the same as the current password");
+    return;
+  }
+
+  // 3️⃣ Prepare payload
+  const accountPayload = {
+    currentPassword
+  };
+
+  if (email) accountPayload.email = email;
+  if (newPassword) accountPayload.newPassword = newPassword;
+  try {
+    setError("");
+
+    await updateProfile(accountPayload);
+
+    alert("Profile updated successfully");
+
+    // OPTIONAL: reset password fields
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+
+  } catch (err) {
+    
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Something went wrong";
+
+      showNotification(message, "error");
+    }
+};
+
 
   return (
     <DashboardLayout>
@@ -84,6 +97,7 @@ const Settings = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter old email"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 outline-none"
               />
             </div>
