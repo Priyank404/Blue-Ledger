@@ -14,15 +14,30 @@ import { HoldingProvider } from './context/HoldingsContext'
 import { ChartProvider } from './context/ChartContext'
 
 const ProtectedRoute = ({ children }) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading authentication...</div>;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
   return user ? children : <Navigate to="/login" replace />;
 };
 function AppRoutes() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>; // 🔒 BLOCK EVERYTHING
+  }
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
+
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+
       <Route
         path="/dashboard"
         element={
