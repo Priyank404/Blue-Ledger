@@ -18,7 +18,7 @@ const Login = () => {
       const res = await logInUser(email, password);
 
       if(res.message == 'success'){
-        login();
+        login(res.user);
         // Show success notification - will appear in dashboard after navigation
         showNotification('Login successful! Welcome back.', 'success');
         navigate('/dashboard');

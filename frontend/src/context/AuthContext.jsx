@@ -1,33 +1,47 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useEffect, useState } from "react";
+import api from "../utils/api";
 
-const AuthContext = createContext()
+const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('isAuthenticated') === 'true'
-  })
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = () => {
-    setIsAuthenticated(true)
-    localStorage.setItem('isAuthenticated', 'true')
-  }
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const res = await api.get("/api/auth/me");
+        setUser(res.data.user);
+      } catch {
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const logout = () => {
-    setIsAuthenticated(false)
-    localStorage.removeItem('isAuthenticated')
+    checkAuth();
+  }, []);
+
+  const login = (userData) => {
+    setUser(userData);
+  };
+
+  const logout = async () => {
+    await api.post("/api/auth/logout");
+    setUser(null);
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
-  )
+  );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider')
-  }
-  return context
+  return useContext(AuthContext);
 }

@@ -13,11 +13,10 @@ import { TransactionProvider } from './context/TransactionContext'
 import { HoldingProvider } from './context/HoldingsContext'
 import { ChartProvider } from './context/ChartContext'
 
-function ProtectedRoute({ children }) {
-  const { isAuthenticated } = useAuth()
-  return isAuthenticated ? children : <Navigate to="/login" replace />
-}
-
+const ProtectedRoute = ({ children }) => {
+  const { user } = useAuth();
+  return user ? children : <Navigate to="/login" replace />;
+};
 function AppRoutes() {
   return (
     <Routes>
