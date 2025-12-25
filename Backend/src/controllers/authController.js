@@ -78,3 +78,22 @@ export const logOut = async (req, res, next) =>{
         next(error.message)
     }
 }
+
+export const getMe = async (req, res, next) => {
+  try {
+    // 🔥 Disable cache here (controller level)
+    res.setHeader("Cache-Control", "no-store");
+
+    const user = await authServices.getUserById(req.user.id);
+
+    return res.status(200).json({
+      user: {
+        id: user._id,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    logger.error("Error fetching current user", { error });
+    next(error);
+  }
+};

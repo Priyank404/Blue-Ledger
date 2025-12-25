@@ -87,9 +87,21 @@ const logInUser = async ({email, password})=>{
     }
 };
 
+
+const getUserById = async (userId) => {
+  const user = await User.findById(userId).select("-password");
+
+  if (!user) {
+    throw new ApiError(401, "User not found");
+  }
+
+  return user;
+};
+
 const authServices = {
   registerUser,
   logInUser,
+  getUserById
 };
 
 export default authServices;

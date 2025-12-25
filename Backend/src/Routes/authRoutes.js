@@ -4,17 +4,11 @@ import { validateSignIn } from '../validators/validateSignIn.js';
 import { validateLogIn } from '../validators/validateLogin.js';
 import { signUp, logIn, logOut } from '../controllers/authController.js';
 import { verifyJWT } from '../middleWares/verifyJWT.js';
+import { getMe } from '../controllers/authController.js';
 
 const router = Router();
 
-router.get('/me', verifyJWT, (req, res) => {
-    return res.status(200).json({
-    user: {
-      id: req.user.id,
-      email: req.user.email
-    }
-  });
-});
+router.get('/me', verifyJWT, getMe);
 
 router.post('/signup', validateSignIn, signUp);
 
