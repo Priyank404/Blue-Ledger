@@ -16,7 +16,8 @@ export const verifyJWT = (req, res, next) => {
 
     // Attach user data to req
     req.user = {
-      id: decoded.id
+      id: decoded.id,
+      email: decoded.email
     };
 
     next();
