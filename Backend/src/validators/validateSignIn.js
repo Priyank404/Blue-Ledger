@@ -38,12 +38,16 @@ export const validateSignIn = (req, res, next) =>{
   const { error } = registerSchema.validate(req.body);
 
   if(error){
+
+    const message = error.details[0].message;
+
+
     logger.error("Validation error at Register route",{
       error: error.details,
       email: req.body.email
     })
 
-    return next(new ApiError(400, "Validation error", error.details))
+    return next(new ApiError(400, message))
   }
 
   next();

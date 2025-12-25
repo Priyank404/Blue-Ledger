@@ -30,13 +30,18 @@ const loginSchema = Joi.object({
 export const validateLogIn = (req, res, next)=>{
   const { error } = loginSchema.validate(req.body);
 
+  
+
   if(error){
+
+    const message = error.details[0].message;
+    
     logger.error("Validation error at Login route",{
       error: error.details,
       email: req.body.email
     });
     
-    return next(new ApiError(400, "Validation error", error.details))
+    return next(new ApiError(400, message))
   }
 
   next();
