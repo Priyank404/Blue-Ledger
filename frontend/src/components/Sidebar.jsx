@@ -19,7 +19,7 @@ const Sidebar = () => {
       if(res.message == "success"){
         logout();
         showNotification('Logged out successfully. See you soon!', 'error');
-        navigate("/");
+        navigate("/login");
       } else {
         showNotification('Logout failed. Please try again.', 'error');
       }
