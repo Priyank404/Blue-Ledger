@@ -26,6 +26,8 @@
     loading: holdingsLoading
   } = useHoldings();
 
+  console.log(holdings)
+
     const formatCurrency = (amount) => {
       return new Intl.NumberFormat('en-IN', {
         style: 'currency',
