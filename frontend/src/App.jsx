@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
@@ -84,6 +84,20 @@ function AppRoutes() {
           <ProtectedRoute>
             <ExportData />
           </ProtectedRoute>
+        }
+      />
+      <Route
+        path="*"
+        element={
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
+              <p className="text-gray-600 mb-4">Page not found</p>
+              <Link to="/dashboard" className="text-primary-600 hover:text-primary-700">
+                Go to Dashboard
+              </Link>
+            </div>
+          </div>
         }
       />
     </Routes>
