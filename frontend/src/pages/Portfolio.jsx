@@ -235,7 +235,7 @@ const valueChangePercent = previousValue > 0
            <ResponsiveContainer width="100%" height={320}>
               <BarChart
                 data={sectorProfit}
-                margin={{ top: 20, right: 20, left: 10, bottom: 40 }}
+                margin={{ top: 20, right: 20, left: 10, bottom: 70 }}
               >
                 {/* Soft grid */}
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -243,7 +243,7 @@ const valueChangePercent = previousValue > 0
                 {/* X Axis */}
                 <XAxis
                   dataKey="sector"
-                  tick={{ fontSize: 12, fill: "#374151" }}
+                  tick={{ fontSize: 10, fill: "#374151" }}
                   angle={-20}
                   textAnchor="end"
                   interval={0}
