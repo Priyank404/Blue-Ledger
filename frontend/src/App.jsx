@@ -12,12 +12,13 @@ import { NotificationProvider } from './context/NotificationContext'
 import { TransactionProvider } from './context/TransactionContext'
 import { HoldingProvider } from './context/HoldingsContext'
 import { ChartProvider } from './context/ChartContext'
+import { ThemeProvider } from './context/ThemeContext'
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading authentication...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 text-gray-900 dark:text-white">Loading authentication...</div>;
   }
 
   if (!user) {
@@ -29,7 +30,7 @@ function AppRoutes() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>; // 🔒 BLOCK EVERYTHING
+    return <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 text-gray-900 dark:text-white">Loading...</div>; // 🔒 BLOCK EVERYTHING
   }
   return (
     <Routes>
@@ -89,11 +90,11 @@ function AppRoutes() {
       <Route
         path="*"
         element={
-          <div className="min-h-screen flex items-center justify-center">
+          <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
             <div className="text-center">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-              <p className="text-gray-600 mb-4">Page not found</p>
-              <Link to="/dashboard" className="text-primary-600 hover:text-primary-700">
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">404</h1>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">Page not found</p>
+              <Link to="/dashboard" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
                 Go to Dashboard
               </Link>
             </div>
@@ -106,19 +107,21 @@ function AppRoutes() {
 
 function App() {
   return (
-    <NotificationProvider>
-      <TransactionProvider>
-        <HoldingProvider>
-          <AuthProvider>
-            <ChartProvider>
-              <Router>
-                <AppRoutes />
-              </Router>
-            </ChartProvider>
-          </AuthProvider>
-        </HoldingProvider>
-      </TransactionProvider>
-    </NotificationProvider>
+    <ThemeProvider>
+      <NotificationProvider>
+        <TransactionProvider>
+          <HoldingProvider>
+            <AuthProvider>
+              <ChartProvider>
+                <Router>
+                  <AppRoutes />
+                </Router>
+              </ChartProvider>
+            </AuthProvider>
+          </HoldingProvider>
+        </TransactionProvider>
+      </NotificationProvider>
+    </ThemeProvider>
   )
 }
 

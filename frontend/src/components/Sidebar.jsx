@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useNotification } from '../context/NotificationContext'
 import { logOutUser } from '../APIs/Auth'
+import ThemeToggle from './ThemeToggle'
 
 
 const Sidebar = () => {
@@ -44,7 +45,7 @@ const Sidebar = () => {
     <>
       {/* Mobile menu button */}
       <button
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md"
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-md text-gray-900 dark:text-white"
         onClick={() => setIsOpen(!isOpen)}
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,8 +61,13 @@ const Sidebar = () => {
       >
         <div className="p-6 h-full flex flex-col">
           <div className="mb-8">
-            <h1 className="text-2xl font-bold">Portfolio</h1>
-            <p className="text-primary-300 text-sm">Tracker</p>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-2xl font-bold">Portfolio</h1>
+                <p className="text-primary-300 text-sm">Tracker</p>
+              </div>
+              <ThemeToggle />
+            </div>
           </div>
 
           <nav className="flex-1">

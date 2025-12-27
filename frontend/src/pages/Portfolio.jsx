@@ -61,7 +61,7 @@ const Portfolio = () => {
   if (isPortfolioLoading) {
       return (
         <DashboardLayout>
-          <p>Loading portfolio...</p>
+          <p className="text-gray-900 dark:text-white">Loading portfolio...</p>
         </DashboardLayout>
       );
     }
@@ -154,12 +154,12 @@ const valueChangePercent = previousValue > 0
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Portfolio Overview</h1>
-            <p className="text-gray-600">View your portfolio allocation and holdings</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Portfolio Overview</h1>
+            <p className="text-gray-600 dark:text-gray-400">View your portfolio allocation and holdings</p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-gray-600">Portfolio Value</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(latestValue)}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Portfolio Value</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(latestValue)}</p>
             <p className={`text-sm font-semibold ${valueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {valueChange >= 0 ? '+' : ''}{formatCurrency(valueChange)} ({valueChangePercent >= 0 ? '+' : ''}{valueChangePercent}%)
             </p>
@@ -168,16 +168,16 @@ const valueChangePercent = previousValue > 0
 
         {/* Portfolio Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 mb-1">Total Investment</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalInvestment )}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Investment</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalInvestment )}</p>
           </div>
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 mb-1">Current Value</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalValue )}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Value</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalValue )}</p>
           </div>
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 mb-1">Total Profit/Loss</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Profit/Loss</p>
             <p className={`text-2xl font-bold ${totalPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {totalPnl >= 0 ? '+' : ''}{formatCurrency(totalPnl )}
             </p>
@@ -185,17 +185,17 @@ const valueChangePercent = previousValue > 0
               {overallROI >= 0 ? '+' : ''}{overallROI}% ROI
             </p>
           </div>
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 mb-1">Number of Holdings</p>
-            <p className="text-2xl font-bold text-gray-900">{holdings.length}</p>
-            <p className="text-xs text-gray-500 mt-1">Active stocks</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Number of Holdings</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{holdings.length}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Active stocks</p>
           </div>
         </div>
 
         {/* Sector-wise Distribution */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Sector-wise Distribution</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Sector-wise Distribution</h2>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -230,8 +230,8 @@ const valueChangePercent = previousValue > 0
 
 
         {/* Sector Wise Profit/Loss */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Sector Wise Profit/Loss</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Sector Wise Profit/Loss</h2>
            <ResponsiveContainer width="100%" height={320}>
               <BarChart
                 data={sectorProfit}
@@ -288,8 +288,8 @@ const valueChangePercent = previousValue > 0
         </div>
 
         {/* Portfolio Growth Graph */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Portfolio Growth Over Time</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Portfolio Growth Over Time</h2>
           <ResponsiveContainer width="100%" height={400}>
             <AreaChart data={portfolioHistory}>
               <defs>
@@ -329,8 +329,8 @@ const valueChangePercent = previousValue > 0
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Asset Allocation */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Asset Allocation</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Asset Allocation</h2>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -355,17 +355,17 @@ const valueChangePercent = previousValue > 0
                 <div key={asset.name} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded" style={{ backgroundColor: asset.color }}></div>
-                    <span className="text-sm text-gray-700">{asset.name}</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{asset.name}</span>
                   </div>
-                  <span className="text-sm font-semibold text-gray-900">{asset.value}%</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">{asset.value}%</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* P&L Distribution */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Profit/Loss by Stock</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Profit/Loss by Stock</h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={pnlDistribution}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -401,8 +401,8 @@ const valueChangePercent = previousValue > 0
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Top Performers */}
           {topPerformers.length > 0 && (
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">🏆 Top Performers</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">🏆 Top Performers</h2>
               <div className="space-y-3">
                 {topPerformers.map((stock, index) => {
                   const pnlPercent = ((stock.pnl / stock.totalInvest) * 100).toFixed(2)
@@ -410,20 +410,20 @@ const valueChangePercent = previousValue > 0
                     <Link
                       key={stock.id}
                       to={`/portfolio/${stock.id}`}
-                      className="flex items-center justify-between p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                      className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center font-bold">
                           {index + 1}
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-900">{stock.symbol}</p>
-                          <p className="text-sm text-gray-600">{stock.qty} shares</p>
+                          <p className="font-semibold text-gray-900 dark:text-white">{stock.symbol}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{stock.qty} shares</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-green-600">+{formatCurrency(stock.pnl)}</p>
-                        <p className="text-sm text-green-600">+{pnlPercent}%</p>
+                        <p className="font-bold text-green-600 dark:text-green-400">+{formatCurrency(stock.pnl)}</p>
+                        <p className="text-sm text-green-600 dark:text-green-400">+{pnlPercent}%</p>
                       </div>
                     </Link>
                   )
@@ -433,8 +433,8 @@ const valueChangePercent = previousValue > 0
           )}
 
           {/* Top Losers */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">📉 Top Losers</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">📉 Top Losers</h2>
             {topLosers.length > 0 ? (
               <div className="space-y-3">
                 {topLosers.map((stock, index) => {
@@ -446,26 +446,26 @@ const valueChangePercent = previousValue > 0
                       to={`/portfolio/${stock.id}`}
                       className={`flex items-center justify-between p-4 rounded-lg transition-colors ${
                         isNegative 
-                          ? 'bg-red-50 hover:bg-red-100' 
-                          : 'bg-gray-50 hover:bg-gray-100'
+                          ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30' 
+                          : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-full text-white flex items-center justify-center font-bold ${
-                          isNegative ? 'bg-red-600' : 'bg-gray-400'
+                          isNegative ? 'bg-red-600' : 'bg-gray-400 dark:bg-gray-500'
                         }`}>
                           {index + 1}
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-900">{stock.symbol}</p>
-                          <p className="text-sm text-gray-600">{stock.qty} shares</p>
+                          <p className="font-semibold text-gray-900 dark:text-white">{stock.symbol}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{stock.qty} shares</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className={`font-bold ${isNegative ? 'text-red-600' : 'text-gray-600'}`}>
+                        <p className={`font-bold ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
                           {stock.pnl >= 0 ? '+' : ''}{formatCurrency(stock.pnl)}
                         </p>
-                        <p className={`text-sm ${isNegative ? 'text-red-600' : 'text-gray-600'}`}>
+                        <p className={`text-sm ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
                           {pnlPercent >= 0 ? '+' : ''}{pnlPercent}%
                         </p>
                       </div>
@@ -474,7 +474,7 @@ const valueChangePercent = previousValue > 0
                 })}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                 <p>No underperforming stocks</p>
               </div>
             )}
@@ -482,8 +482,8 @@ const valueChangePercent = previousValue > 0
         </div>
 
         {/* Value Allocation */}
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Value Allocation by Stock</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Value Allocation by Stock</h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={valueAllocation} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" />
@@ -499,19 +499,19 @@ const valueChangePercent = previousValue > 0
           <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
             {valueAllocation.slice(0, 4).map((item) => (
 
-              <div key={item.name} className="p-3 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">{item.name}</p>
-                <p className="text-lg font-bold text-gray-900">{formatCurrency(item.value)}</p>
-                <p className="text-xs text-gray-500">{item.percentage}%</p>
+              <div key={item.name} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <p className="text-sm text-gray-600 dark:text-gray-400">{item.name}</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">{formatCurrency(item.value)}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{item.percentage}%</p>
               </div>
             ))}
           </div>
         </div>
 
         {/* Stock Holdings Table */}
-        <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Stock Holdings</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Stock Holdings</h2>
             <div className="flex gap-2">
               {showFilters && (
                 <button 
@@ -532,16 +532,16 @@ const valueChangePercent = previousValue > 0
 
           {/* Filters for Stock Holdings */}
           {showFilters && (
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg space-y-4">
+          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Search Stock</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Stock</label>
                 <input
                   type="text"
                   value={searchStock}
                   onChange={(e) => setSearchStock(e.target.value)}
                   placeholder="Search by name..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
                 />
               </div>
               <div>
@@ -624,9 +624,9 @@ const valueChangePercent = previousValue > 0
 
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Stock Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Price</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Price</th>
@@ -636,23 +636,23 @@ const valueChangePercent = previousValue > 0
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredHoldings.length > 0 ? (
                   filteredHoldings.map((holding) => (
-                  <tr key={holding.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={holding.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Link
                         to={`/portfolio/${holding.id}`}
-                        className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                        className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
                       >
                         {holding.symbol}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{holding.qty}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(holding.avgPrice)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(holding.currentPrice)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(holding.totalInvest)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(holding.currentValue)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{holding.qty}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatCurrency(holding.avgPrice)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatCurrency(holding.currentPrice)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatCurrency(holding.totalInvest)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatCurrency(holding.currentValue)}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
                         className={`text-sm font-semibold ${
@@ -665,7 +665,7 @@ const valueChangePercent = previousValue > 0
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Link
                         to={`/portfolio/${holding.id}`}
-                        className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                        className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
                       >
                         View Details
                       </Link>
@@ -674,7 +674,7 @@ const valueChangePercent = previousValue > 0
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
                       No holdings match the current filters
                     </td>
                   </tr>

@@ -103,8 +103,8 @@ useEffect(() => {
 
 
 //loading screen if the stock is loading
-if (loading || transactionsLoading) {
-    return <DashboardLayout><p>Loading...</p></DashboardLayout>;
+  if (loading || transactionsLoading) {
+    return <DashboardLayout><p className="text-gray-900 dark:text-white">Loading...</p></DashboardLayout>;
   }
 
   
@@ -115,8 +115,8 @@ if (loading || transactionsLoading) {
     return (
       <DashboardLayout>
         <div className="text-center py-12">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Stock not found</h1>
-          <Link to="/portfolio" className="text-primary-600 hover:text-primary-700">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Stock not found</h1>
+          <Link to="/portfolio" className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300">
             Return to Portfolio
           </Link>
         </div>
@@ -223,8 +223,8 @@ if (loading || transactionsLoading) {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Portfolio Details: {stock.symbol}</h1>
-            <p className="text-gray-600">Detailed view of {stock.symbol} stock</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Portfolio Details: {stock.symbol}</h1>
+            <p className="text-gray-600 dark:text-gray-400">Detailed view of {stock.symbol} stock</p>
           </div>
           <Link
             to="/portfolio"
@@ -236,44 +236,44 @@ if (loading || transactionsLoading) {
 
         {/* Stock Information Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 mb-1">Stock Name</p>
-            <p className="text-2xl font-bold text-gray-900">{stock.symbol}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Stock Name</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stock.symbol}</p>
 
           </div>
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 mb-1">Current Price</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(stock.currentPrice)}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Price</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(stock.currentPrice)}</p>
             <p className={`text-sm mt-1 font-semibold ${dayChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {dayChange >= 0 ? '+' : ''}{formatCurrency(dayChange)} ({dayChangePercent >= 0 ? '+' : ''}{dayChangePercent}%)
             </p>
           </div>
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 mb-1">Average Buy Price</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(stock.avgPrice)}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Average Buy Price</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(stock.avgPrice)}</p>
             <p className={`text-sm mt-1 font-semibold ${priceChangeFromAvg >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {priceChangeFromAvg >= 0 ? '+' : ''}{priceChangeFromAvg}% from avg
             </p>
           </div>
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 mb-1">Quantity</p>
-            <p className="text-2xl font-bold text-gray-900">{stock.qty}</p>
-            <p className="text-xs text-gray-500 mt-1">Shares</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Quantity</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{stock.qty}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Shares</p>
           </div>
         </div>
 
         {/* Additional Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 mb-1">Total Investment</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(stock.totalInvest)}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Investment</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(stock.totalInvest)}</p>
           </div>
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 mb-1">Current Value</p>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(stock.currentValue)}</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Value</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(stock.currentValue)}</p>
           </div>
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 mb-1">Profit/Loss</p>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Profit/Loss</p>
             <p className={`text-2xl font-bold ${stock.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {stock.pnl >= 0 ? '+' : ''}{formatCurrency(stock.pnl)}
             </p>
@@ -281,20 +281,20 @@ if (loading || transactionsLoading) {
               {pnlPercentage >= 0 ? '+' : ''}{pnlPercentage}%
             </p>
           </div>
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 mb-1">ROI</p>
-            <p className={`text-2xl font-bold ${roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">ROI</p>
+            <p className={`text-2xl font-bold ${roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
               {roi >= 0 ? '+' : ''}{roi}%
             </p>
-            <p className="text-xs text-gray-500 mt-1">Return on Investment</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Return on Investment</p>
           </div>
         </div>
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Stock Price History */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Price History</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Price History</h2>
             {PriceHistory.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={PriceHistory}>
@@ -331,15 +331,15 @@ if (loading || transactionsLoading) {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-             <div className="h-64 flex items-center justify-center text-gray-500">
+             <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
                 Price history will appear after market close
               </div>
             )}
           </div>
 
           {/* Price Comparison Chart */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Price vs Average Buy Price</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Price vs Average Buy Price</h2>
             {priceComparisonData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={priceComparisonData}>
@@ -378,15 +378,15 @@ if (loading || transactionsLoading) {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-                <p className="text-gray-500">No data available</p>
+              <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <p className="text-gray-500 dark:text-gray-400">No data available</p>
               </div>
             )}
           </div>
 
           {/* Value Over Time */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Holding Value Over Time</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Holding Value Over Time</h2>
             {valueOverTime.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={valueOverTime}>
@@ -437,15 +437,15 @@ if (loading || transactionsLoading) {
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-                <p className="text-gray-500">No data available</p>
+              <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <p className="text-gray-500 dark:text-gray-400">No data available</p>
               </div>
             )}
           </div>
 
           {/* P&L Over Time */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Profit/Loss Trend</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Profit/Loss Trend</h2>
             {pnlOverTime.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={pnlOverTime}>
@@ -479,8 +479,8 @@ if (loading || transactionsLoading) {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-                <p className="text-gray-500">No data available</p>
+              <div className="h-64 flex items-center justify-center bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <p className="text-gray-500 dark:text-gray-400">No data available</p>
               </div>
             )}
           </div>
@@ -488,42 +488,42 @@ if (loading || transactionsLoading) {
 
         {/* Additional Information */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Investment Details</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Investment Details</h3>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-gray-600">Total Invest</span>
-                <span className="font-semibold text-gray-900">{formatCurrency(stock.totalInvest)}</span>
+                <span className="text-gray-600 dark:text-gray-400">Total Invest</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(stock.totalInvest)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Current Value</span>
-                <span className="font-semibold text-gray-900">{formatCurrency(stock.currentValue)}</span>
+                <span className="text-gray-600 dark:text-gray-400">Current Value</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(stock.currentValue)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Quantity</span>
-                <span className="font-semibold text-gray-900">{stock.qty} shares</span>
+                <span className="text-gray-600 dark:text-gray-400">Quantity</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{stock.qty} shares</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Avg Buy Price</span>
-                <span className="font-semibold text-gray-900">{formatCurrency(stock.avgPrice)}</span>
+                <span className="text-gray-600 dark:text-gray-400">Avg Buy Price</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(stock.avgPrice)}</span>
               </div>
-              <div className="flex justify-between pt-3 border-t">
-                <span className="text-gray-600">Profit/Loss</span>
+              <div className="flex justify-between pt-3 border-t dark:border-gray-700">
+                <span className="text-gray-600 dark:text-gray-400">Profit/Loss</span>
                 <span className={`font-semibold ${stock.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {stock.pnl >= 0 ? '+' : ''}{formatCurrency(stock.pnl)} ({pnlPercentage}%)
                 </span>
               </div>
-              <div className="flex justify-between pt-3 border-t">
-                <span className="text-gray-600">ROI</span>
-                <span className={`font-semibold ${roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div className="flex justify-between pt-3 border-t dark:border-gray-700">
+                <span className="text-gray-600 dark:text-gray-400">ROI</span>
+                <span className={`font-semibold ${roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                   {roi >= 0 ? '+' : ''}{roi}%
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Transaction Distribution</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Transaction Distribution</h3>
             {stockTransactions.length > 0 ? (
               <div className="space-y-4">
                 <ResponsiveContainer width="100%" height={150}>
@@ -547,28 +547,28 @@ if (loading || transactionsLoading) {
                 </ResponsiveContainer>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Total Transactions</span>
-                    <span className="font-semibold text-gray-900">{stockTransactions.length}</span>
+                    <span className="text-gray-600 dark:text-gray-400">Total Transactions</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">{stockTransactions.length}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Buy Orders</span>
-                    <span className="font-semibold text-green-600">{buyCount}</span>
+                    <span className="text-gray-600 dark:text-gray-400">Buy Orders</span>
+                    <span className="font-semibold text-green-600 dark:text-green-400">{buyCount}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Sell Orders</span>
-                    <span className="font-semibold text-red-600">{sellCount}</span>
+                    <span className="text-gray-600 dark:text-gray-400">Sell Orders</span>
+                    <span className="font-semibold text-red-600 dark:text-red-400">{sellCount}</span>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="h-48 flex items-center justify-center text-gray-500">
+              <div className="h-48 flex items-center justify-center text-gray-500 dark:text-gray-400">
                 No transactions found
               </div>
             )}
           </div>
 
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Actions</h3>
             <div className="space-y-3">
               <button className="w-full px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-md">
                 Buy More
@@ -588,8 +588,8 @@ if (loading || transactionsLoading) {
 
         {/* Transaction History */}
         {showHistory && stockTransactions.length > 0 && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Transaction History for {stock.symbol}
             </h3>
             <TransactionsTable 
