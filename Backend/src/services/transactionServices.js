@@ -82,8 +82,8 @@ async function updateHoldingBuy({ portfolioId, name, quantity, price, date, sess
   }
 
   // existing holding -> weighted average
-  const totalQuantity = holding.Quantity + quantity;
-  const totalInvestment = (holding.avgBuyPrice * holding.Quantity) + (price * quantity);
+  const totalQuantity = Number(holding.Quantity) + quantity;
+  const totalInvestment = (Number(holding.avgBuyPrice) * Number(holding.Quantity)) + (price * quantity);
 
   holding.Quantity = totalQuantity;
   holding.avgBuyPrice = totalInvestment / totalQuantity;
