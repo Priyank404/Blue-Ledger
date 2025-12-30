@@ -4,6 +4,7 @@ import transactionRoutes from './Routes/transcationRoutes.js';
 import holdingsRoutes from './Routes/holdingsRoutes.js';
 import stockRoutes from './Routes/stocksRotues.js';
 import portfolioRoutes from './Routes/portfolioRoutes.js'
+import exportRoutes from './Routes/exportRoutes.js'
 import settingRoutes from './Routes/settingRoutes.js'
 import cookieParser from 'cookie-parser';
 import cors from "cors";
@@ -34,6 +35,7 @@ app.use('/api/holdings', holdingsRoutes);
 app.use('/api/stock',stockRoutes)
 app.use('/api/portfolio', portfolioRoutes)
 app.use('/api/users', settingRoutes)
+app.use('/api/export', exportRoutes)
 
 app.use(globalErrorHandler)
 
