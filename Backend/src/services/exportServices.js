@@ -35,13 +35,13 @@ const exportHoldings = async (portfolioId) => {
         const livePrice = priceMap[hld.symbol] || null;
 
         const totalValue= hld.avgBuyPrice * hld.Quantity;
-        const currentValue= livePrice ? livePrice * hld.Quantity : null;
-        const pnl = livePrice ? currentValue - totalValue : null;
-        const pnlPercentage = livePrice ? ((pnl/totalValue) * 100).toFixed(2) : null;
+        const currentValue= livePrice ? Number((livePrice * hld.Quantity).toFixed(2)) : null;
+        const pnl = livePrice ? Number((currentValue - totalValue).toFixed(2)) : null;
+        const pnlPercentage = livePrice ? Number(((pnl/totalValue) * 100).toFixed(2)) : null;
         return {
             symbol: hld.symbol,
             quantity: hld.Quantity,
-            avgBuyPrice: hld.avgBuyPrice,
+            avgBuyPrice: Number((hld.avgBuyPrice).toFixed(2)),
             livePrice,
             totalValue,
             currentValue,
@@ -215,19 +215,32 @@ export const exportData = async (userId, type) =>{
         switch (type) {
 
             case "transactions":
-                return await exportTransactions(portfolio._id);
+                const transaactions = await exportTransactions(portfolio._id);
+                return {
+                    transaactions
+                }
             
             case "holdings":
-                return await exportHoldings(portfolio._id);
+                const holdings = await exportHoldings(portfolio._id);
+                return {
+                    holdings
+                }
             
-            case "history":
-                return await exportHistory(portfolio._id);
+            case "portfolioHistory":
+                const portfolioHistory = await exportHistory(portfolio._id);
+                return {
+                    portfolioHistory
+                }
 
-            case "summary":
-                return await exportSummary(portfolio._id);
+            case "portfolioSummary":
+                const protfolioSummary = await exportSummary(portfolio._id);
+                return{
+                    protfolioSummary
+                }
             
             case "all":
                 return await exportAllData(portfolio._id);
+                
 
             default:
             throw new ApiError(400, "Export type not implemented");
