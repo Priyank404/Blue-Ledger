@@ -49,36 +49,31 @@ export const getExport = async (req, res, next) =>{
 
         switch (type) {
         case "transactions":
-            csvData = data.transactions;
+            csvData = data;
             break;
         case "holdings":
-            csvData = data.holdings;
+            csvData = data;
             break;
         case "portfolioSummary":
             csvData = [data]; // summary is single object
             break;
         case "portfolioHistory":
-            csvData = data.portfolioHistory;
+            csvData = data;
             break;
         default:
             throw new Error("Invalid export type");
         }
 
+
         const { csv, filename } = toCsv(type, csvData);
 
-        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Type", "text/csv; charset=utf-8");
         res.setHeader(
         "Content-Disposition",
         `attachment; filename="${filename}"`
         );
 
-        if (!csvData || csvData.length === 0) {
-            throw new ApiError(400, "No data available for export");
-        }
-
-
-        return res.status(200).send(csv);
-
+       return res.status(200).send("\ufeff" + csv);
 
     } catch (error) {
         logger.error("Error while exporting data", {error});

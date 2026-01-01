@@ -1,11 +1,11 @@
-import { Parser } from "json2csv";
+import { parse } from "json2csv";
 import ApiError from "../utilities/apiError.js";
 
 const csvConfigs = {
   transactions: {
     filename: "transactions.csv",
     fields: [
-      { label: "Date", value: row => row.date?.split("T")[0] },
+      { label: "Date", value: row => row.date instanceof Date ? row.date.toISOString().split("T")[0]: "" },
       { label: "Type", value: "transactionType" },
       { label: "Symbol", value: "symbol" },
       { label: "Quantity", value: "quantity" },
@@ -42,7 +42,7 @@ const csvConfigs = {
   portfolioHistory: {
     filename: "portfolio_history.csv",
     fields: [
-      { label: "Date", value: row => row.date?.split("T")[0] },
+      { label: "Date", value: row => row.date ? new Date(row.date).toISOString().split("T")[0] : "" },
       { label: "Portfolio Value", value: "value" }
     ]
   }
@@ -55,11 +55,11 @@ export const toCsv = (type, data) => {
     throw new ApiError(400, "CSV export not supported for this type");
   }
 
-  const parser = new Parser({ fields: config.fields });
-  const csv = parser.parse(data);
+  const csv = parse(data, { fields: config.fields });
 
   return {
     csv,
     filename: config.filename
   };
 };
+

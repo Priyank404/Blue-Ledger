@@ -89,7 +89,7 @@ const exportSummary = async(portfolioId) =>{
         currentValue += current;
     }
 
-    const pnl = (currentValue - totalInvested).toFixed(2);
+    const pnl = Number((currentValue - totalInvested)).toFixed(2);
     
     const pnlPercentage = totalInvested > 0 ? Number((pnl/totalInvested) * 100).toFixed(2) : 0;
 
@@ -215,28 +215,20 @@ export const exportData = async (userId, type) =>{
         switch (type) {
 
             case "transactions":
-                const transaactions = await exportTransactions(portfolio._id);
-                return {
-                    transaactions
-                }
+                return await exportTransactions(portfolio._id);
+                 
             
             case "holdings":
-                const holdings = await exportHoldings(portfolio._id);
-                return {
-                    holdings
-                }
+                return await exportHoldings(portfolio._id);
+                
             
             case "portfolioHistory":
-                const portfolioHistory = await exportHistory(portfolio._id);
-                return {
-                    portfolioHistory
-                }
+                return await exportHistory(portfolio._id);
+                
 
             case "portfolioSummary":
-                const protfolioSummary = await exportSummary(portfolio._id);
-                return{
-                    protfolioSummary
-                }
+                return await exportSummary(portfolio._id);
+                
             
             case "all":
                 return await exportAllData(portfolio._id);
