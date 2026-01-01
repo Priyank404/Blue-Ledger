@@ -1,131 +1,44 @@
 import { useState } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
-import {
-  transactions,
-  stockHoldings,
-  portfolioData,
-  portfolioValueHistory,
-  assetAllocation,
-  sectorAllocation,
-} from '../data/dummyData'
+import { exportData } from '../APIs/export'
+import { useNotification } from '../context/NotificationContext'
+
 
 const ExportData = () => {
   const [exportFormat, setExportFormat] = useState('csv')
   const [exportType, setExportType] = useState('transactions')
+  const { showNotification } = useNotification()
 
-  // Convert array to CSV
-  const arrayToCSV = (array, headers) => {
-    const csvHeaders = headers.join(',')
-    const csvRows = array.map((item) =>
-      headers.map((header) => {
-        const value = item[header] || ''
-        // Handle values with commas by wrapping in quotes
-        return typeof value === 'string' && value.includes(',')
-          ? `"${value}"`
-          : value
-      }).join(',')
-    )
-    return [csvHeaders, ...csvRows].join('\n')
-  }
+  const handleExport = async () => {
+    try {
+    const blob = await exportData(exportType, exportFormat);
 
-  // Convert array to JSON
-  const arrayToJSON = (array) => {
-    return JSON.stringify(array, null, 2)
-  }
+    const url = window.URL.createObjectURL(blob);
 
-  // Get data based on export type
-  const getExportData = () => {
-    switch (exportType) {
-      case 'transactions':
-        return {
-          data: transactions,
-          headers: ['id', 'date', 'name', 'type', 'qty', 'price', 'totalAmt'],
-          filename: 'transactions',
-        }
-      case 'holdings':
-        return {
-          data: stockHoldings,
-          headers: [
-            'id',
-            'name',
-            'qty',
-            'avgPrice',
-            'currentPrice',
-            'totalInvest',
-            'currentValue',
-            'pnl',
-          ],
-          filename: 'stock_holdings',
-        }
-      case 'portfolio-summary':
-        return {
-          data: [portfolioData],
-          headers: [
-            'totalInvestment',
-            'totalGainLoss',
-            'numberOfStocks',
-            'portfolioValue',
-          ],
-          filename: 'portfolio_summary',
-        }
-      case 'portfolio-history':
-        return {
-          data: portfolioValueHistory,
-          headers: ['date', 'value'],
-          filename: 'portfolio_history',
-        }
-      case 'all-data':
-        return {
-          data: {
-            transactions,
-            stockHoldings,
-            portfolioData,
-            portfolioValueHistory,
-            assetAllocation,
-            sectorAllocation,
-          },
-          headers: null,
-          filename: 'all_portfolio_data',
-        }
-      default:
-        return { data: [], headers: [], filename: 'export' }
-    }
-  }
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${exportType}_${new Date().toISOString().split("T")[0]}.${exportFormat}`;
 
-  // Handle export
-  const handleExport = () => {
-    const { data, headers, filename } = getExportData()
-    let content = ''
-    let mimeType = ''
-    let fileExtension = ''
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-    if (exportFormat === 'csv') {
-      if (exportType === 'all-data') {
-        alert(
-          'CSV export is not available for "All Data". Please use JSON format.'
-        )
-        return
+    window.URL.revokeObjectURL(url);
+    showNotification('Data exported successfully!', 'success');
+  } catch (err) {
+        if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text();
+          const json = JSON.parse(text);
+
+          showNotification(json.message || "Failed to export data", "error");
+        } catch {
+          showNotification("Failed to export data", "error");
+        }
+      } else {
+        showNotification("Failed to export data", "error");
       }
-      content = arrayToCSV(data, headers)
-      mimeType = 'text/csv'
-      fileExtension = 'csv'
-    } else {
-      // JSON format
-      content = arrayToJSON(data)
-      mimeType = 'application/json'
-      fileExtension = 'json'
     }
-
-    // Create blob and download
-    const blob = new Blob([content], { type: mimeType })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${filename}_${new Date().toISOString().split('T')[0]}.${fileExtension}`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
   }
 
   return (
@@ -158,9 +71,9 @@ const ExportData = () => {
                 >
                   <option value="transactions">Transactions</option>
                   <option value="holdings">Stock Holdings</option>
-                  <option value="portfolio-summary">Portfolio Summary</option>
-                  <option value="portfolio-history">Portfolio History</option>
-                  <option value="all-data">All Data (JSON only)</option>
+                  <option value="portfolioSummary">Portfolio Summary</option>
+                  <option value="portfolioHistory">Portfolio History</option>
+                  <option value="all">All Data (JSON only)</option>
                 </select>
               </div>
 
@@ -204,28 +117,7 @@ const ExportData = () => {
           </div>
 
           {/* Data Preview */}
-          <div className="border-t pt-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-              Preview
-            </h3>
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-h-64 overflow-auto">
-              <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
-                {exportType === 'all-data' ? (
-                  arrayToJSON(getExportData().data).substring(0, 500) + '...'
-                ) : exportFormat === 'csv' ? (
-                  arrayToCSV(
-                    getExportData().data.slice(0, 3),
-                    getExportData().headers
-                  ) + '\n...'
-                ) : (
-                  arrayToJSON(getExportData().data.slice(0, 3)).substring(
-                    0,
-                    500
-                  ) + '...'
-                )}
-              </pre>
-            </div>
-          </div>
+        
 
           {/* Export Button */}
           <button
