@@ -8,13 +8,33 @@ export const ChartProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+
+  const normalizePortfolioHistory = (data) => {
+  const map = new Map();
+
+  data.forEach(item => {
+    const day = new Date(item.date).toISOString().split("T")[0];
+
+    // overwrite → keeps LAST value of the day
+    map.set(day, {
+      date: day,
+      value: item.value
+    });
+  });
+
+  return Array.from(map.values()).sort(
+    (a, b) => new Date(a.date) - new Date(b.date)
+  );
+};
+
+
   const fetchPortfolioHistory = async () => {
     try {
       setLoading(true);
       setError(null);
 
       const data = await getPortfolioValueHistory();
-      setPortfolioHistory(data || []);
+      setPortfolioHistory(normalizePortfolioHistory(data || []));
     } catch (err) {
       console.error("Error fetching portfolio chart history", err);
       setError("Failed to load chart data");
