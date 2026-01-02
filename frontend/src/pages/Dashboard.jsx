@@ -39,6 +39,12 @@ const getRedShade = (index, total) => {
   return `hsl(0, 70%, ${lightness}%)`;
 };
 
+const getStatusColor = (pnl) => {
+  if (pnl > 0) return "#16a34a"; // green
+  if (pnl < 0) return "#dc2626"; // red
+  return "#9ca3af";              // gray
+};
+
 
 const Dashboard = () => {
   /* ================= CONTEXTS ================= */
@@ -70,6 +76,64 @@ const Dashboard = () => {
 
   /* ================= PIE DATA ================= */
 
+
+  // label render 
+ const renderPieLabel = ({
+  cx,
+  cy,
+  midAngle,
+  outerRadius,
+  percent,
+  name,
+  payload
+}) => {
+  if (percent < 0.02) return null; // optional cutoff
+
+  const RADIAN = Math.PI / 180;
+  const sin = Math.sin(-RADIAN * midAngle);
+  const cos = Math.cos(-RADIAN * midAngle);
+
+  const startX = cx + outerRadius * cos;
+  const startY = cy + outerRadius * sin;
+
+  const midX = cx + (outerRadius + 14) * cos;
+  const midY = cy + (outerRadius + 14) * sin;
+
+  const endX = midX + (cos >= 0 ? 18 : -18);
+  const endY = midY;
+
+  const color = getStatusColor(payload.pnl);
+
+  return (
+    <g>
+      {/* Arrow line */}
+      <path
+        d={`M${startX},${startY} L${midX},${midY} L${endX},${endY}`}
+        stroke={color}
+        fill="none"
+        strokeWidth={1}
+      />
+
+      {/* Dot */}
+      <circle cx={endX} cy={endY} r={2} fill={color} />
+
+      {/* Text */}
+      <text
+        x={endX + (cos >= 0 ? 4 : -4)}
+        y={endY}
+        textAnchor={cos >= 0 ? "start" : "end"}
+        dominantBaseline="central"
+        fill={color}
+        fontSize={12}
+        fontWeight={500}
+      >
+        {`${name} ${(percent * 100).toFixed(1)}%`}
+      </text>
+    </g>
+  );
+};
+
+
   // 🟢 Profit Contribution
   const profitContributionData = useMemo(() => {
     return holdings
@@ -80,6 +144,8 @@ const Dashboard = () => {
       }))
       .sort((a, b) => b.value - a.value)
   }, [holdings])
+
+
 
   // 🔴 Loss Contribution (absolute values)
   const lossContributionData = useMemo(() => {
@@ -214,9 +280,8 @@ const Dashboard = () => {
                       dataKey="value"
                       nameKey="name"
                       outerRadius={90}
-                      label={({ name, percent }) =>
-                        `${name} ${(percent * 100).toFixed(1)}%`
-                      }
+                      labelLine={false}          // 👈 THIS enables the arrow line
+                      label={renderPieLabel}    // 👈 Custom label
                     >
                       {profitContributionData.map((_, index) => (
                         <Cell
@@ -251,9 +316,8 @@ const Dashboard = () => {
                       dataKey="value"
                       nameKey="name"
                       outerRadius={90}
-                      label={({ name, percent }) =>
-                        `${name} ${(percent * 100).toFixed(1)}%`
-                      }
+                      labelLine={false}          // 👈 THIS enables the arrow line
+                      label={renderPieLabel}    // 👈 Custom label
                     >
                       {lossContributionData.map((_, index) => (
                         <Cell
