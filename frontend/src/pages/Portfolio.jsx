@@ -1,7 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
-import {  assetAllocation } from '../data/dummyData'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts'
 import { useHoldings } from "../context/HoldingsContext";
 import { useChart } from '../context/ChartContext'
@@ -16,6 +15,11 @@ const COLORS = [
   "#ef4444",
   "#14b8a6"
 ];
+const STATUS_COLORS = {
+  Profit: "#16a34a",   // green
+  Loss: "#dc2626",     // red
+  Neutral: "#9ca3af"   // gray
+};
 
 const Portfolio = () => {
 
@@ -33,12 +37,6 @@ const Portfolio = () => {
     loading: holdingsLoading
   } = useHoldings();
 
-
-
-  
-
-
-  // Filter states for Stock Holdings table
   const [searchStock, setSearchStock] = useState('')
   const [minQty, setMinQty] = useState('')
   const [maxQty, setMaxQty] = useState('')
@@ -48,6 +46,40 @@ const Portfolio = () => {
   const [maxPnl, setMaxPnl] = useState('')
   const [pnlFilter, setPnlFilter] = useState('') // 'profit', 'loss', or ''
   const [showFilters, setShowFilters] = useState(false)
+
+
+
+ // Top Performers & Losers
+const sortedHoldings = [...holdings].sort((a, b) => b.pnl - a.pnl);
+const profitStocks = sortedHoldings.filter(h => h.pnl > 0);
+const lossStocks = sortedHoldings.filter(h => h.pnl < 0);
+const neutralStocks = sortedHoldings.filter(h => h.pnl === 0);
+
+
+
+const holdingStatusData = useMemo(() => {
+    return [
+      { name: "Profit", value: profitStocks.length },
+      { name: "Loss", value: lossStocks.length },
+      { name: "Neutral", value: neutralStocks.length }
+    ].filter(item => item.value > 0)
+  }, [profitStocks, lossStocks, neutralStocks])
+
+ const isPortfolioLoading = chartLoading || holdingsLoading ;
+
+ if (isPortfolioLoading) {
+    return (
+      <DashboardLayout>
+        <p className="text-gray-900 dark:text-white">Loading portfolio...</p>
+      </DashboardLayout>
+    );
+  }
+
+  
+
+
+  // Filter states for Stock Holdings table
+  
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -56,15 +88,9 @@ const Portfolio = () => {
     }).format(amount)
   }
 
-  const isPortfolioLoading = chartLoading || holdingsLoading ;
+ 
   
-  if (isPortfolioLoading) {
-      return (
-        <DashboardLayout>
-          <p className="text-gray-900 dark:text-white">Loading portfolio...</p>
-        </DashboardLayout>
-      );
-    }
+  
 
   // Compute Portfolio Summary Values
 const totalInvestment = holdings.reduce((sum, h) => sum + h.totalInvest, 0);
@@ -90,11 +116,7 @@ const valueAllocation = holdings
   }))
   .sort((a, b) => b.value - a.value);
 
-// Top Performers & Losers
-const sortedHoldings = [...holdings].sort((a, b) => b.pnl - a.pnl);
-const profitStocks = sortedHoldings.filter(h => h.pnl > 0);
-const lossStocks = sortedHoldings.filter(h => h.pnl < 0);
-const neutralStocks = sortedHoldings.filter(h => h.pnl === 0);
+
 
 
 const topPerformers = [
@@ -112,15 +134,6 @@ const valueChange = latestValue - previousValue;
 const valueChangePercent = previousValue > 0 
   ? ((valueChange / previousValue) * 100).toFixed(2) 
   : 0;
-
-
-
-
-
-  const ASSET_COLORS = assetAllocation.map(a => a.color)
-
-
-
 
   // Filter stock holdings
   const filteredHoldings = holdings.filter((holding) => {
@@ -148,6 +161,13 @@ const valueChangePercent = previousValue > 0
     setMaxPnl('')
     setPnlFilter('')
   }
+
+  
+
+  
+
+   
+
 
   return (
     <DashboardLayout>
@@ -330,37 +350,28 @@ const valueChangePercent = previousValue > 0
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Asset Allocation */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Asset Allocation</h2>
+            <h2 className="text-xl font-semibold mb-4">Holdings Status</h2>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={assetAllocation}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={100}
-                  fill="#8884d8"
+                  data={holdingStatusData}
                   dataKey="value"
+                  outerRadius={100}
+                  label={({ name, percent }) =>
+                    `${name} ${(percent * 100).toFixed(0)}%`
+                  }
                 >
-                  {assetAllocation.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={ASSET_COLORS[index % ASSET_COLORS.length]} />
+                  {holdingStatusData.map((entry, index) => (
+                    <Cell
+                      key={index}
+                      fill={STATUS_COLORS[entry.name]}
+                    />
                   ))}
                 </Pie>
                 <Tooltip />
+                <Legend />
               </PieChart>
             </ResponsiveContainer>
-            <div className="mt-4 space-y-2">
-              {assetAllocation.map((asset) => (
-                <div key={asset.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded" style={{ backgroundColor: asset.color }}></div>
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{asset.name}</span>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">{asset.value}%</span>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* P&L Distribution */}

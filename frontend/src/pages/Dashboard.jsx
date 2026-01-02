@@ -1,171 +1,287 @@
-  import { useState } from 'react'
-  import DashboardLayout from '../layouts/DashboardLayout'
-  import StatCard from '../components/StatCard'
-  import TransactionsTable from '../components/TransactionsTable'
-  import { useTransactions } from '../context/TransactionContext'
-  import {  assetAllocation } from '../data/dummyData'
-  import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts'
-  import { useChart } from '../context/ChartContext'
-  import { useHoldings } from "../context/HoldingsContext";
+import { useMemo } from 'react'
+import DashboardLayout from '../layouts/DashboardLayout'
+import StatCard from '../components/StatCard'
+import TransactionsTable from '../components/TransactionsTable'
+import { useTransactions } from '../context/TransactionContext'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell
+} from 'recharts'
+import { useChart } from '../context/ChartContext'
+import { useHoldings } from '../context/HoldingsContext'
 
-  const Dashboard = () => {
+const COLORS = [
+  '#3b82f6',
+  '#16a34a',
+  '#f59e0b',
+  '#8b5cf6',
+  '#ec4899',
+  '#14b8a6'
+]
 
-  const {
-    portfolioHistory,
-    loading: chartLoading
-  } = useChart();
-  
+// Green shades (dark → light)
+const getGreenShade = (index, total) => {
+  const lightness = 35 + (index / Math.max(total - 1, 1)) * 40;
+  return `hsl(142, 70%, ${lightness}%)`;
+};
 
-  const {
-    transactions,
-    loading: transactionsLoading
-  } = useTransactions();
+// Red shades (dark → light)
+const getRedShade = (index, total) => {
+  const lightness = 35 + (index / Math.max(total - 1, 1)) * 40;
+  return `hsl(0, 70%, ${lightness}%)`;
+};
 
-  const {
-    holdings,
-    loading: holdingsLoading
-  } = useHoldings();
 
-    const formatCurrency = (amount) => {
-      return new Intl.NumberFormat('en-IN', {
-        style: 'currency',
-        currency: 'INR',
-        maximumFractionDigits: 0,
-      }).format(amount)
-    }
-  const isDashboardLoading = chartLoading || holdingsLoading || transactionsLoading;
+const Dashboard = () => {
+  /* ================= CONTEXTS ================= */
+  const { portfolioHistory, loading: chartLoading } = useChart()
+  const { transactions, loading: transactionsLoading } = useTransactions()
+  const { holdings, loading: holdingsLoading } = useHoldings()
 
+  const isDashboardLoading =
+    chartLoading || holdingsLoading || transactionsLoading
+
+  /* ================= HELPERS ================= */
+  const formatCurrency = (amount) =>
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(amount)
+
+  /* ================= CALCULATIONS ================= */
+  const totalInvestment = holdings.reduce(
+    (sum, h) => sum + h.totalInvest,
+    0
+  )
+  const totalValue = holdings.reduce(
+    (sum, h) => sum + h.currentValue,
+    0
+  )
+  const totalPnl = holdings.reduce((sum, h) => sum + h.pnl, 0)
+
+  /* ================= PIE DATA ================= */
+
+  // 🟢 Profit Contribution
+  const profitContributionData = useMemo(() => {
+    return holdings
+      .filter(h => h.pnl > 0)
+      .map(h => ({
+        name: h.symbol,
+        value: h.pnl
+      }))
+      .sort((a, b) => b.value - a.value)
+  }, [holdings])
+
+  // 🔴 Loss Contribution (absolute values)
+  const lossContributionData = useMemo(() => {
+    return holdings
+      .filter(h => h.pnl < 0)
+      .map(h => ({
+        name: h.symbol,
+        value: Math.abs(h.pnl)
+      }))
+      .sort((a, b) => b.value - a.value)
+  }, [holdings])
+
+  /* ================= LOADING ================= */
   if (isDashboardLoading) {
     return (
       <DashboardLayout>
-        <p className="text-gray-900 dark:text-white">Loading dashboard...</p>
-      </DashboardLayout>
-    );
-  }
-
-
-    const totalInvestment = holdings.reduce((sum, h) => sum + h.totalInvest, 0);
-    const totalValue = holdings.reduce((sum, h) => sum + h.currentValue, 0);
-    const totalPnl = holdings.reduce((sum, h) => sum + h.pnl, 0);
-
-
-    return (
-      <DashboardLayout>
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Dashboard</h1>
-            <p className="text-gray-600 dark:text-gray-400">Welcome back! Here's your portfolio overview.</p>
-          </div>
-
-          {/* Portfolio Overview Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard
-              title="Total Investment"
-              value={formatCurrency(totalInvestment)}
-              icon="💰"
-            />
-            <StatCard
-              title="Total Gain/Loss"
-              value={formatCurrency(totalPnl)}
-              subtitle={`${((totalPnl / totalInvestment) * 100).toFixed(2)}%`}
-              trend={totalPnl >= 0 ? 'up' : 'down'}
-              icon="📈"
-            />
-            <StatCard
-              title="Number of Stocks"
-              value={holdings.length}
-              icon="📊"
-            />
-            <StatCard
-              title="Portfolio Value"
-              value={formatCurrency(totalValue)}
-              icon="💼"
-            />
-          </div>
-
-          {/* Overall Portfolio Graph */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Overall Portfolio Graph
-            </h2>
-
-            {chartLoading ? (
-              <p className="text-gray-500 dark:text-gray-400">Loading chart...</p>
-            ) : portfolioHistory.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400">No portfolio history yet</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={portfolioHistory}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(value) =>
-                      new Date(value).toLocaleDateString("en-IN", {
-                        month: "short",
-                        day: "numeric",
-                      })
-                    }
-                  />
-                  <YAxis
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
-                  />
-                  <Tooltip
-                    formatter={(value) => formatCurrency(value)}
-                    labelFormatter={(label) =>
-                      new Date(label).toLocaleDateString()
-                    }
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    name="Portfolio Value"
-                    dot={{ r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Asset Allocation */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Asset Allocation</h2>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={assetAllocation} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="name" type="category" width={100} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[0, 8, 8, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-              <div className="mt-4 space-y-2">
-                {assetAllocation.map((asset) => (
-                  <div key={asset.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded" style={{ backgroundColor: asset.color }}></div>
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{asset.name}</span>
-                    </div>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">{asset.value}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Recent Transactions */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Recent Transactions</h2>
-              <TransactionsTable transactions={transactions} />
-            </div>
-          </div>
-        </div>
+        <p className="text-gray-900 dark:text-white">
+          Loading dashboard...
+        </p>
       </DashboardLayout>
     )
   }
 
-  export default Dashboard
+  /* ================= UI ================= */
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Dashboard
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Welcome back! Here's your portfolio overview.
+          </p>
+        </div>
 
+        {/* Stat Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            title="Total Investment"
+            value={formatCurrency(totalInvestment)}
+            icon="💰"
+          />
+          <StatCard
+            title="Total Gain/Loss"
+            value={formatCurrency(totalPnl)}
+            subtitle={`${((totalPnl / totalInvestment) * 100).toFixed(2)}%`}
+            trend={totalPnl >= 0 ? 'up' : 'down'}
+            icon="📈"
+          />
+          <StatCard
+            title="Number of Stocks"
+            value={holdings.length}
+            icon="📊"
+          />
+          <StatCard
+            title="Portfolio Value"
+            value={formatCurrency(totalValue)}
+            icon="💼"
+          />
+        </div>
+
+        {/* Overall Portfolio Graph */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Overall Portfolio Graph
+          </h2>
+
+          {portfolioHistory.length === 0 ? (
+            <p className="text-gray-500 dark:text-gray-400">
+              No portfolio history yet
+            </p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={portfolioHistory}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="date"
+                  tickFormatter={(value) =>
+                    new Date(value).toLocaleDateString('en-IN', {
+                      month: 'short',
+                      day: 'numeric'
+                    })
+                  }
+                />
+                <YAxis
+                  tickFormatter={(value) =>
+                    `₹${(value / 1000).toFixed(0)}k`
+                  }
+                />
+                <Tooltip
+                  formatter={(value) => formatCurrency(value)}
+                  labelFormatter={(label) =>
+                    new Date(label).toLocaleDateString()
+                  }
+                />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* PROFIT & LOSS CONTRIBUTION (DUAL PIE) */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+            Profit & Loss Contribution
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Profit Pie */}
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-green-600 mb-2">
+                Profit Contribution
+              </h3>
+
+              {profitContributionData.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  No profitable stocks
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie
+                      data={profitContributionData}
+                      dataKey="value"
+                      nameKey="name"
+                      outerRadius={90}
+                      label={({ name, percent }) =>
+                        `${name} ${(percent * 100).toFixed(1)}%`
+                      }
+                    >
+                      {profitContributionData.map((_, index) => (
+                        <Cell
+                          key={index}
+                          fill={getGreenShade(index, profitContributionData.length)}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(v) => formatCurrency(v)}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+
+            {/* Loss Pie */}
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-red-600 mb-2">
+                Loss Contribution
+              </h3>
+
+              {lossContributionData.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  No loss-making stocks 🎉
+                </p>
+              ) : (
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie
+                      data={lossContributionData}
+                      dataKey="value"
+                      nameKey="name"
+                      outerRadius={90}
+                      label={({ name, percent }) =>
+                        `${name} ${(percent * 100).toFixed(1)}%`
+                      }
+                    >
+                      {lossContributionData.map((_, index) => (
+                        <Cell
+                          key={index}
+                          fill={getRedShade(index, lossContributionData.length)}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(v) => formatCurrency(v)}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Transactions */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Recent Transactions
+          </h2>
+          <TransactionsTable transactions={transactions} />
+        </div>
+      </div>
+    </DashboardLayout>
+  )
+}
+
+export default Dashboard
