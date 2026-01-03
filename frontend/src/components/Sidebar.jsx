@@ -63,8 +63,8 @@ const Sidebar = () => {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h1 className="text-2xl font-bold">Portfolio</h1>
-                <p className="text-primary-300 text-sm">Tracker</p>
+                <h1 className="text-2xl font-bold">Blue Ledger</h1>
+                <p className="text-primary-300 text-sm">Portfolio Tracker</p>
               </div>
               <ThemeToggle />
             </div>
