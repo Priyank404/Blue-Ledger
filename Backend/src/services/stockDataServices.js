@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import customParseFormat from "dayjs/plugin/customParseFormat.js";
+import customParseFormat from "dayjs/plugin/customParseFormat";
 import { NseIndia } from "stock-nse-india";
 const nse = new NseIndia();
 
