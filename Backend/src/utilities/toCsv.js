@@ -1,5 +1,5 @@
 import { parse } from "json2csv";
-import ApiError from "../utilities/apiError.js";
+import ApiError from "./apiError.js";
 
 const csvConfigs = {
   transactions: {
