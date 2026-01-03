@@ -43,7 +43,7 @@ const Login = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary-500 to-primary-700 dark:from-primary-900 dark:to-primary-800 flex items-center justify-center p-4">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Portfolio Tracker</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Blue Ledger</h1>
           <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-300">Login</h2>
         </div>
 
