@@ -1,6 +1,6 @@
-# 📊 Portfolio Tracker
+# 📊 Blue Ledger
 
-A full-stack **Portfolio Tracker** web application that helps users manage, track, and analyze their investment portfolio.
+A full-stack **Blue Ledger** web application that helps users manage, track, and analyze their investment portfolio.
 Built with a modern **frontend + backend** architecture following real-world production practices.
 
 🔗 **Live Demo**: https://portfolio-tracker-two-ruby.vercel.app/  
@@ -163,3 +163,4 @@ GitHub: https://github.com/Priyank404
 ---
 
 ⭐ If you like this project, please **star the repository**!
+
