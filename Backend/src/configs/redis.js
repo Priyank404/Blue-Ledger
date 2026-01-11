@@ -1,7 +1,7 @@
 import { Redis } from 'ioredis'
 import logger from "../utilities/logger.js";
 
-const redisClient = new Redis ({
+export const redisClient = new Redis ({
     host: process.env.REDIS_HOST|| 'localhost',
     port: process.env.REDIS_PORT || 6379
 });
@@ -17,19 +17,19 @@ redisClient.on("error",(error)=>{
 export const cacheGet = async(key)=>{
     try {
         const data = await redisClient.get(key);
-        return data ? JSON.stringify(data) : null;
+        return data ? JSON.parse(data) : null;
     } catch (error) {
         logger.error("Redis GET error: ",{key,error});
         return null;
     }
 }
 
-export const cacheSet = async (key,ttl,value)=>{
+export const cacheSet = async (key,value,ttl)=>{
     try {
         await redisClient.setex(key,ttl,JSON.stringify(value));
         return true;
     } catch (error) {
-        logger.error("Redis SET error: ",{key, value, error})
+        logger.error("Redis SET error: ",{key, value, error: error.message})
         return false;
     }
 }
@@ -52,7 +52,7 @@ export const cahceDelPattern = async (keys) =>{
         }
         return true;
     } catch (error) {
-        logger.error("Redis DEL PATTERN error: ", {keys, value})
+        logger.error("Redis DEL PATTERN error: ", {keys})
         return false
     }
 }
