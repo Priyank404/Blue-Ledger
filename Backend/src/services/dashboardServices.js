@@ -1,7 +1,7 @@
-import { cacheGet, cacheSet } from "../configs/redis";
+import { cacheGet, cacheSet } from "../configs/redis.js";
 import { Transaction } from "../models/transactionSchema.js";
-import { calculatePortfolioAnalytics } from "./portfolioAnalyticService";
-import { getPortfolioHistory } from "./portfolioSnapShotServices";
+import { calculatePortfolioAnalytics } from "./portfolioAnalyticService.js";
+import { getPortfolioHistory } from "./portfolioSnapShotServices.js";
 import { Portfolio } from "../models/portfolioSchema.js";
 import logger from "../utilities/logger.js";
 
