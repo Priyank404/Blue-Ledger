@@ -17,48 +17,49 @@ export const calculatePortfolioAnalytics = async ({userId}) =>{
     }
 
     const symbols = holdings.map(h => h.symbol);
-    const livePrice = getLivePriceCached(symbols);
+    const livePrice = await getLivePriceCached(symbols);
 
     const priceMap = {};
     const sectorMap = {};
 
     livePrice.forEach((p) => {
         priceMap[p.symbol] = p.lastPrice;
-        sectorMap[p.sector] = p.sector || "Other";
+        sectorMap[p.symbol] = p.sector || "Other";
     })
 
     const holdingWithPnL = holdings.map((h) =>{
         const currentPrice = priceMap[h.symbol] || 0;
+        const sector = sectorMap[h.symbol] || "Others"
         const qty = Number(h.Quantity);
-        const avgPrice = Number(h.avgBuyPrice) || 0;
+        const avgPrice = Number((h.avgBuyPrice).toFixed(2)) || 0;
         const investedValue = avgPrice * qty;
-        const currentValue = currentPrice * qty;
-        const pnl = currentValue - investedValue;
+        const currentValue = Number((currentPrice * qty).toFixed(2));
+        const pnl = Number((currentValue - investedValue).toFixed(2));
 
         return {
             id: h._id,
             symbol: h.symbol,
+            sector,
             avgBuyPrice: avgPrice,
             Quantity: qty,
             currentPrice: currentPrice,
             investedValue: investedValue,
             currentValue: currentValue,
             pnl: pnl,
-            pnlPercentage: totalInvest > 0 ? ((pnl / totalInvest) * 100).toFixed(2) : "0.00",
-            roi: totalInvest > 0 ? ((pnl / totalInvest) * 100).toFixed(2) : "0.00",
-            sector: sectorMap[h.sector]
+            pnlPercentage: investedValue > 0 ? Number(((pnl / investedValue) * 100).toFixed(2)) : "0.00",
+            roi: investedValue > 0 ? Number(((pnl / investedValue) * 100).toFixed(2)) : "0.00",
         }
     })
 
     //Calculate Totals
-    const totalInvestment = holdingWithPnL.reduce((sum , h) => sum + h.totalInvest, 0);
-    const currentTotalValue = holdingWithPnl.reduce((sum, h) => sum + h.currectValue, 0);
-    const totalPnl = currentTotalValue - totalInvestment;
+    const totalInvestment = Number(holdingWithPnL.reduce((sum , h) => sum + h.investedValue, 0).toFixed(2));
+    const currentTotalValue = Number(holdingWithPnL.reduce((sum, h) => sum + h.currentValue, 0).toFixed(2));
+    const totalPnl = Number((currentTotalValue - totalInvestment).toFixed(2));
     const totalPnlPercentage = totalInvestment > 0 ? ((totalPnl / totalInvestment) * 100).toFixed(2) : "0.00";
     const overallRoi = totalInvestment > 0 ? ((totalPnl / totalInvestment) * 100).toFixed(2) : "0.00";
 
     //Sorting and Categorizing
-    const sorted = [...holdingsWithPnL].sort((a, b) => b.pnl - a.pnl);
+    const sorted = [...holdingWithPnL].sort((a, b) => b.pnl - a.pnl);
     const profitStock = sorted.filter((h) => h.pnl > 0);
     const lossStock = sorted.filter((h) => h.pnl < 0);
     const neturalStock = sorted.filter((h) => h.pnl === 0);
@@ -75,7 +76,7 @@ export const calculatePortfolioAnalytics = async ({userId}) =>{
 
     const sectorAllocation = Object.entries(sectorValueMap).map(([sector, value]) => ({
       name: sector,
-      value: currentValue > 0 ? ((value / currentValue) * 100).toFixed(2) : "0.00",
+      value: currentTotalValue > 0 ? ((value / currentTotalValue) * 100).toFixed(2) : "0.00",
     }));
 
     //Sector Profit
@@ -102,19 +103,19 @@ export const calculatePortfolioAnalytics = async ({userId}) =>{
     const valueAllocation = holdingWithPnL.map((h) => ({
         name: h.symbol,
         value: h.currentValue,
-        percentage: currentValue > 0 ? ((h.currentValue / currentValue) * 100).toFixed(1) : "0.0",
+        percentage: currentTotalValue > 0 ? ((h.currentValue / currentTotalValue) * 100).toFixed(1) : "0.0",
     })).sort((a, b) => b.value - a.value);
 
 
     //Holding Status
     const holdingStatus = {
-      profit: profitStocks.length,
-      loss: lossStocks.length,
-      neutral: neutralStocks.length,
+      profit: profitStock.length,
+      loss: lossStock.length,
+      neutral: neturalStock.length,
     };
 
     //Pnl Contributions
-    const profitContribution = profitStocks
+    const profitContribution = profitStock
       .map((h) => ({
         name: h.symbol,
         value: h.pnl,
@@ -122,7 +123,7 @@ export const calculatePortfolioAnalytics = async ({userId}) =>{
       }))
       .sort((a, b) => b.value - a.value);
 
-    const lossContribution = lossStocks
+    const lossContribution = lossStock
       .map((h) => ({
         name: h.symbol,
         value: Math.abs(h.pnl),
@@ -154,7 +155,11 @@ export const calculatePortfolioAnalytics = async ({userId}) =>{
       }
 
     } catch (error) {
-        logger.error("Error while calculating portfolio analytics", {error});
+        logger.error("Error while calculating portfolio analytics", {
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+        });
         throw error;
     }
 }

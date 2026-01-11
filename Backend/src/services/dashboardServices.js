@@ -43,7 +43,11 @@ export const getDashboardData = async ({userId}) =>{
         return dashboardData;
 
     } catch (error) {
-        logger.error("Error while fetching dashboard data", {error});
+        logger.error("Error while calculating portfolio analytics", {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+        });
         throw error;
     }
 }
