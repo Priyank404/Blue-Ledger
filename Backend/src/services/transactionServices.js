@@ -1,4 +1,5 @@
 import logger from "../utilities/logger.js";
+import { cahceDelPattern } from "../configs/redis.js";
 import { Transaction } from "../models/transactionSchema.js";
 import { Portfolio } from "../models/portfolioSchema.js";
 import mongoose from "mongoose";
@@ -49,6 +50,10 @@ export const createTransaction = async ({ userId, type, name, quantity, price, d
     session.endSession();
 
     createPortfolioSnapshot({ portfolioId: portfolio._id });
+
+    await cahceDelPattern(`dashboard:${userId}:*`);
+    await cahceDelPattern(`portfolio:${userId}:*`);
+    logger.info("User cached invalidated after transactions", {userId});
 
     return createdTx;
   } catch (error) {
@@ -190,6 +195,10 @@ export const removeTransaction = async ({ userId, transactionId }) => {
 
     await session.commitTransaction();
     session.endSession();
+
+    await cacheDelPattern(`dashboard:${userId}*`);
+    await cacheDelPattern(`portfolio:${userId}*`);
+   logger.info("User caches invalidated after transaction deletion", { userId });
 
     return deletedTx;
   } catch (error) {
