@@ -1,9 +1,9 @@
 import { Holdings } from "../models/holdingSchema.js";
 import { Transaction } from "../models/transactionSchema.js";
 import { Portfolio } from "../models/portfolioSchema.js";
-import { getSingleLivePriceCached } from "./stockPriceCache.js";
+import { getSingleLivePriceCached } from "./stockPriceCacheServices.js";
 import { getStockHistory } from "./stockSnapShotServices.js";
-import { cacheGet, cacheSet } from "../config/redis.js";
+import { cacheGet, cacheSet } from "../configs/redis.js";
 import logger from "../utilities/logger.js";
 import ApiError from "../utilities/apiError.js";
 

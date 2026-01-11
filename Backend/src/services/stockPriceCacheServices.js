@@ -1,4 +1,4 @@
-import { redisClient } from "../configs/redis.js";
+import { cacheGet, cacheSet } from "../configs/redis.js";
 import { BulkPrice, getStockPrice } from "./stockDataServices.js";
 import logger from "../utilities/logger.js";
 
@@ -6,7 +6,7 @@ export const getLivePriceCached = async (symbols) =>{
     try {
         const cacheKey = `livePrice:${symbols.sort().join(",")}`;
 
-        const cachedData = await redisClient.get(cacheKey);
+        const cachedData = await cacheGet(cacheKey);
 
         if(cachedData){
             logger.info("Live price cached HIT");
@@ -17,7 +17,7 @@ export const getLivePriceCached = async (symbols) =>{
 
         const price = await BulkPrice({symbols});
 
-        await redisClient.set( cacheKey, price, 60);
+        await cacheSet( cacheKey, price, 60);
 
         return price;
     } catch (error) {
@@ -31,7 +31,7 @@ export const getSingleLivePriceCached = async (symbol) =>{
     try {
         const cacheKey = `livePrice:${symbol}`;
 
-        const cachedData = await redisClient.get(cacheKey);
+        const cachedData = await cacheGet(cacheKey);
 
         if(cachedData){
             logger.info("Live price cached HIT");
@@ -42,7 +42,7 @@ export const getSingleLivePriceCached = async (symbol) =>{
 
         const price = await getStockPrice({symbol});
 
-        await redisClient.set( cacheKey, price, 60);
+        await cacheSet( cacheKey, price, 60);
 
         return price;
     } catch (error) {
