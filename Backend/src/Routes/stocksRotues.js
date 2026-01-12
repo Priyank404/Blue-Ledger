@@ -16,8 +16,8 @@ router.get("/:symbol/price/cached", verifyJWT, getPriceCached);
 // POST /api/stock/bulk/price/cached (cached version)
 router.post("/bulk/price/cached", verifyJWT, getPriceBulkCached);
 
-// GET /api/stock/details/:holdingId (complete stock details)
-router.get("/details/:symbols", verifyJWT, getStockDetails);
+// for single stock detials (complete stock details)
+router.get("/details/:symbol", verifyJWT, getStockDetails);
 
 
 export default router;
