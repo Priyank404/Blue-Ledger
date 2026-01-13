@@ -76,7 +76,7 @@ export const calculatePortfolioAnalytics = async ({userId}) =>{
 
     const sectorAllocation = Object.entries(sectorValueMap).map(([sector, value]) => ({
       name: sector,
-      value: currentTotalValue > 0 ? ((value / currentTotalValue) * 100).toFixed(2) : "0.00",
+      value: currentTotalValue > 0 ? Number(((value / currentTotalValue) * 100).toFixed(2)) : "0.00",
     }));
 
     //Sector Profit
