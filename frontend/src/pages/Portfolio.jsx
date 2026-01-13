@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts'
 import { useHoldings } from "../context/HoldingsContext";
+import { useDashboard } from "../context/DashboardContext";
 import { useChart } from '../context/ChartContext'
 
 
@@ -16,26 +17,39 @@ const COLORS = [
   "#14b8a6"
 ];
 const STATUS_COLORS = {
-  Profit: "#16a34a",   // green
-  Loss: "#dc2626",     // red
-  Neutral: "#9ca3af"   // gray
+  profit: "#16a34a",   // green
+  loss: "#dc2626",     // red
+  neutral: "#9ca3af"   // gray
 };
 
 const Portfolio = () => {
 
-
-  const {
-    portfolioHistory,
-    loading: chartLoading
-  } = useChart();
-
-
   const {
     holdings,
-    sectorAllocation,
-    sectorProfit,
     loading: holdingsLoading
   } = useHoldings();
+  
+
+  const { dashboardData, loading} = useDashboard();
+
+  const {
+      totalInvestment,
+      currentTotalValue,
+      totalPnl,
+      numberOfStocks,
+      portfolioHistory,
+      recentTransaction,
+      profitContribution,
+      lossContribution,
+      sectorAllocation,
+      sectorProfit,
+      holdingStatus,
+      pnlDistribution,
+      topPerformerStock,
+      topLosserStock,
+      valueAllocation,
+      overallRoi
+    } = dashboardData
 
   const [searchStock, setSearchStock] = useState('')
   const [minQty, setMinQty] = useState('')
@@ -49,23 +63,8 @@ const Portfolio = () => {
 
 
 
- // Top Performers & Losers
-const sortedHoldings = [...holdings].sort((a, b) => b.pnl - a.pnl);
-const profitStocks = sortedHoldings.filter(h => h.pnl > 0);
-const lossStocks = sortedHoldings.filter(h => h.pnl < 0);
-const neutralStocks = sortedHoldings.filter(h => h.pnl === 0);
 
-
-
-const holdingStatusData = useMemo(() => {
-    return [
-      { name: "Profit", value: profitStocks.length },
-      { name: "Loss", value: lossStocks.length },
-      { name: "Neutral", value: neutralStocks.length }
-    ].filter(item => item.value > 0)
-  }, [profitStocks, lossStocks, neutralStocks])
-
- const isPortfolioLoading = chartLoading || holdingsLoading ;
+ const isPortfolioLoading = loading || holdingsLoading ;
 
  if (isPortfolioLoading) {
     return (
@@ -92,54 +91,13 @@ const holdingStatusData = useMemo(() => {
   
   
 
-  // Compute Portfolio Summary Values
-const totalInvestment = holdings.reduce((sum, h) => sum + h.totalInvest, 0);
-const totalValue = holdings.reduce((sum, h) => sum + h.currentValue, 0);
-const totalPnl = holdings.reduce((sum, h) => sum + h.pnl, 0);
-const overallROI = totalInvestment > 0 
-  ? ((totalPnl / totalInvestment) * 100).toFixed(2) 
-  : 0;
 
-// Prepare P&L distribution chart data
-const pnlDistribution = holdings.map(h => ({
-  name: h.symbol,
-  pnl: h.pnl,
-  pnlPercent: ((h.pnl / h.totalInvest) * 100).toFixed(2),
-}));
-
-// Prepare Value Allocation chart data
-const valueAllocation = holdings
-  .map(h => ({
-    name: h.symbol,
-    value: h.currentValue,
-    percentage: ((h.currentValue / totalValue) * 100).toFixed(1),
-  }))
-  .sort((a, b) => b.value - a.value);
-
-
-
-
-const topPerformers = [
-  ...profitStocks.slice(0, 3),
-  ...neutralStocks.slice(0, Math.max(0, 3 - profitStocks.length))
-];
-
-const topLosers = lossStocks.slice(-3).reverse();
-
-
-// Portfolio Value Change (use your actual holdings data)
-const latestValue = totalValue;
-const previousValue = 0; // until you implement real history from backend
-const valueChange = latestValue - previousValue;
-const valueChangePercent = previousValue > 0 
-  ? ((valueChange / previousValue) * 100).toFixed(2) 
-  : 0;
 
   // Filter stock holdings
-  const filteredHoldings = holdings.filter((holding) => {
+  const filteredHoldings = dashboardData.holdings.filter((holding) => {
     const matchesSearch = holding.symbol.toLowerCase().includes(searchStock.toLowerCase())
-    const matchesQty = (!minQty || holding.qty >= parseFloat(minQty)) &&
-                      (!maxQty || holding.qty <= parseFloat(maxQty))
+    const matchesQty = (!minQty || holding.Quantity >= parseFloat(minQty)) &&
+                      (!maxQty || holding.Quantity <= parseFloat(maxQty))
     const matchesPrice = (!minPrice || holding.currentPrice >= parseFloat(minPrice)) &&
                         (!maxPrice || holding.currentPrice <= parseFloat(maxPrice))
     const matchesPnl = (!minPnl || holding.pnl >= parseFloat(minPnl)) &&
@@ -162,6 +120,8 @@ const valueChangePercent = previousValue > 0
     setPnlFilter('')
   }
 
+  const valueChange = currentTotalValue - totalInvestment;
+
   
 
   
@@ -179,9 +139,9 @@ const valueChangePercent = previousValue > 0
           </div>
           <div className="text-right">
             <p className="text-sm text-gray-600 dark:text-gray-400">Portfolio Value</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(latestValue)}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(currentTotalValue)}</p>
             <p className={`text-sm font-semibold ${valueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {valueChange >= 0 ? '+' : ''}{formatCurrency(valueChange)} ({valueChangePercent >= 0 ? '+' : ''}{valueChangePercent}%)
+              {valueChange >= 0 ? '+' : ''}{formatCurrency(valueChange)} ({overallRoi >= 0 ? '+' : ''}{overallRoi}%)
             </p>
           </div>
         </div>
@@ -194,7 +154,7 @@ const valueChangePercent = previousValue > 0
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Value</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalValue )}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(currentTotalValue )}</p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Profit/Loss</p>
@@ -202,12 +162,12 @@ const valueChangePercent = previousValue > 0
               {totalPnl >= 0 ? '+' : ''}{formatCurrency(totalPnl )}
             </p>
             <p className={`text-sm mt-1 font-semibold ${totalPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {overallROI >= 0 ? '+' : ''}{overallROI}% ROI
+              {overallRoi >= 0 ? '+' : ''}{overallRoi }% ROI
             </p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Number of Holdings</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{holdings.length}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">{numberOfStocks}</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Active stocks</p>
           </div>
         </div>
@@ -354,17 +314,19 @@ const valueChangePercent = previousValue > 0
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={holdingStatusData}
+                  data={Object.entries(holdingStatus).map(([name,value])=>({
+                    name, value,
+                  }))}
                   dataKey="value"
                   outerRadius={100}
                   label={({ name, percent }) =>
                     `${name} ${(percent * 100).toFixed(0)}%`
                   }
                 >
-                  {holdingStatusData.map((entry, index) => (
+                  {Object.entries(holdingStatus).map(([name],index)=>(
                     <Cell
                       key={index}
-                      fill={STATUS_COLORS[entry.name]}
+                      fill={STATUS_COLORS[name]}
                     />
                   ))}
                 </Pie>
@@ -411,12 +373,11 @@ const valueChangePercent = previousValue > 0
         {/* Top Performers and Losers */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Top Performers */}
-          {topPerformers.length > 0 && (
+          {topPerformerStock.length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">🏆 Top Performers</h2>
               <div className="space-y-3">
-                {topPerformers.map((stock, index) => {
-                  const pnlPercent = ((stock.pnl / stock.totalInvest) * 100).toFixed(2)
+                {topPerformerStock.map((stock, index) => {
                   return (
                     <Link
                       key={stock.id}
@@ -429,12 +390,12 @@ const valueChangePercent = previousValue > 0
                         </div>
                         <div>
                           <p className="font-semibold text-gray-900 dark:text-white">{stock.symbol}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{stock.qty} shares</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{stock.Quantity} shares</p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-green-600 dark:text-green-400">+{formatCurrency(stock.pnl)}</p>
-                        <p className="text-sm text-green-600 dark:text-green-400">+{pnlPercent}%</p>
+                        <p className="text-sm text-green-600 dark:text-green-400">+{stock.pnlPercentage}%</p>
                       </div>
                     </Link>
                   )
@@ -446,10 +407,10 @@ const valueChangePercent = previousValue > 0
           {/* Top Losers */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">📉 Top Losers</h2>
-            {topLosers.length > 0 ? (
+            {topLosserStock.length > 0 ? (
               <div className="space-y-3">
-                {topLosers.map((stock, index) => {
-                  const pnlPercent = ((stock.pnl / stock.totalInvest) * 100).toFixed(2)
+                {topLosserStock.map((stock, index) => {
+                  
                   const isNegative = stock.pnl < 0
                   return (
                     <Link
@@ -469,7 +430,7 @@ const valueChangePercent = previousValue > 0
                         </div>
                         <div>
                           <p className="font-semibold text-gray-900 dark:text-white">{stock.symbol}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{stock.qty} shares</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{stock.Quantity} shares</p>
                         </div>
                       </div>
                       <div className="text-right">
@@ -477,7 +438,7 @@ const valueChangePercent = previousValue > 0
                           {stock.pnl >= 0 ? '+' : ''}{formatCurrency(stock.pnl)}
                         </p>
                         <p className={`text-sm ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                          {pnlPercent >= 0 ? '+' : ''}{pnlPercent}%
+                          {stock.pnlPercentage >= 0 ? '+' : ''}{stock.pnlPercentage}%
                         </p>
                       </div>
                     </Link>
@@ -659,10 +620,10 @@ const valueChangePercent = previousValue > 0
                         {holding.symbol}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{holding.qty}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatCurrency(holding.avgPrice)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{holding.Quantity}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatCurrency(holding.avgBuyPrice)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatCurrency(holding.currentPrice)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatCurrency(holding.totalInvest)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatCurrency(holding.investedValue)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatCurrency(holding.currentValue)}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span

@@ -187,7 +187,7 @@ const Dashboard = () => {
             Overall Portfolio Graph
           </h2>
 
-          {portfolioHistory.length === 0 ? (
+          {portfolioHistory ? (
             <p className="text-gray-500 dark:text-gray-400">
               No portfolio history yet
             </p>
