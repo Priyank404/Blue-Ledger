@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import StatCard from '../components/StatCard'
 import TransactionsTable from '../components/TransactionsTable'
-import { useTransactions } from '../context/TransactionContext'
+import { useDashboard } from '../context/DashboardContext'
 import {
   LineChart,
   Line,
@@ -48,12 +48,8 @@ const getStatusColor = (pnl) => {
 
 const Dashboard = () => {
   /* ================= CONTEXTS ================= */
-  const { portfolioHistory, loading: chartLoading } = useChart()
-  const { transactions, loading: transactionsLoading } = useTransactions()
-  const { holdings, loading: holdingsLoading } = useHoldings()
+  const { dashboardData, loading} = useDashboard();
 
-  const isDashboardLoading =
-    chartLoading || holdingsLoading || transactionsLoading
 
   /* ================= HELPERS ================= */
   const formatCurrency = (amount) =>
@@ -63,18 +59,6 @@ const Dashboard = () => {
       maximumFractionDigits: 0
     }).format(amount)
 
-  /* ================= CALCULATIONS ================= */
-  const totalInvestment = holdings.reduce(
-    (sum, h) => sum + h.totalInvest,
-    0
-  )
-  const totalValue = holdings.reduce(
-    (sum, h) => sum + h.currentValue,
-    0
-  )
-  const totalPnl = holdings.reduce((sum, h) => sum + h.pnl, 0)
-
-  /* ================= PIE DATA ================= */
 
 
   // label render 
@@ -134,40 +118,28 @@ const Dashboard = () => {
 };
 
 
-  // 🟢 Profit Contribution
-  const profitContributionData = useMemo(() => {
-    return holdings
-      .filter(h => h.pnl > 0)
-      .map(h => ({
-        name: h.symbol,
-        value: h.pnl
-      }))
-      .sort((a, b) => b.value - a.value)
-  }, [holdings])
-
-
-
-  // 🔴 Loss Contribution (absolute values)
-  const lossContributionData = useMemo(() => {
-    return holdings
-      .filter(h => h.pnl < 0)
-      .map(h => ({
-        name: h.symbol,
-        value: Math.abs(h.pnl)
-      }))
-      .sort((a, b) => b.value - a.value)
-  }, [holdings])
 
   /* ================= LOADING ================= */
-  if (isDashboardLoading) {
+   if (loading) {
     return (
       <DashboardLayout>
-        <p className="text-gray-900 dark:text-white">
-          Loading dashboard...
-        </p>
+        <p className="text-gray-900 dark:text-white">Loading dashboard...</p>
       </DashboardLayout>
     )
   }
+
+  const {
+    totalInvestment,
+    currentTotalValue,
+    totalPnl,
+    numberOfStocks,
+    portfolioHistory,
+    recentTransaction,
+    profitContribution,
+    lossContribution
+  } = dashboardData
+
+  console.log(dashboardData)
 
   /* ================= UI ================= */
   return (
@@ -199,12 +171,12 @@ const Dashboard = () => {
           />
           <StatCard
             title="Number of Stocks"
-            value={holdings.length}
+            value={numberOfStocks}
             icon="📊"
           />
           <StatCard
             title="Portfolio Value"
-            value={formatCurrency(totalValue)}
+            value={formatCurrency(currentTotalValue)}
             icon="💼"
           />
         </div>
@@ -268,7 +240,7 @@ const Dashboard = () => {
                 Profit Contribution
               </h3>
 
-              {profitContributionData.length === 0 ? (
+              {profitContribution.length === 0 ? (
                 <p className="text-sm text-gray-500">
                   No profitable stocks
                 </p>
@@ -276,17 +248,17 @@ const Dashboard = () => {
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
                     <Pie
-                      data={profitContributionData}
+                      data={profitContribution}
                       dataKey="value"
                       nameKey="name"
                       outerRadius={90}
                       labelLine={false}          // 👈 THIS enables the arrow line
                       label={renderPieLabel}    // 👈 Custom label
                     >
-                      {profitContributionData.map((_, index) => (
+                      {profitContribution.map((_, index) => (
                         <Cell
                           key={index}
-                          fill={getGreenShade(index, profitContributionData.length)}
+                          fill={getGreenShade(index, profitContribution.length)}
                         />
                       ))}
                     </Pie>
@@ -304,7 +276,7 @@ const Dashboard = () => {
                 Loss Contribution
               </h3>
 
-              {lossContributionData.length === 0 ? (
+              {lossContribution.length === 0 ? (
                 <p className="text-sm text-gray-500">
                   No loss-making stocks 🎉
                 </p>
@@ -312,17 +284,17 @@ const Dashboard = () => {
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
                     <Pie
-                      data={lossContributionData}
+                      data={lossContribution}
                       dataKey="value"
                       nameKey="name"
                       outerRadius={90}
                       labelLine={false}          // 👈 THIS enables the arrow line
                       label={renderPieLabel}    // 👈 Custom label
                     >
-                      {lossContributionData.map((_, index) => (
+                      {lossContribution.map((_, index) => (
                         <Cell
                           key={index}
-                          fill={getRedShade(index, lossContributionData.length)}
+                          fill={getRedShade(index, lossContribution.length)}
                         />
                       ))}
                     </Pie>
@@ -341,7 +313,7 @@ const Dashboard = () => {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
             Recent Transactions
           </h2>
-          <TransactionsTable transactions={transactions} />
+          <TransactionsTable transactions={recentTransaction} />
         </div>
       </div>
     </DashboardLayout>
