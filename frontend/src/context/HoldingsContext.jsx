@@ -1,185 +1,46 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { getHoldings } from "../APIs/holdings";
-import { getPrice } from "../APIs/FetchPrice";
+import { getPortfolioData } from "../APIs/holdings";
 
-const HoldingContext = createContext();
+const HoldingsContext = createContext();
+
+
 
 export const HoldingProvider = ({ children }) => {
-  const [rawHoldings, setRawHoldings] = useState([]);
-  const [prices, setPrices] = useState({});
   const [holdings, setHoldings] = useState([]);
-  const [loadingHoldings, setLoadingHoldings] = useState(true);
-  const [loadingPrices, setLoadingPrices] = useState(false);
   const [sectorAllocation, setSectorAllocation] = useState([]);
   const [sectorProfit, setSectorProfit] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-
-
-  /* ---------------------------
-     1️⃣ Fetch holdings (DB)
-     --------------------------- */
-  useEffect(() => {
-    const fetchHoldings = async () => {
+  useEffect(()=>{
+    const fetchProtfolioData = async () =>{
       try {
-        setLoadingHoldings(true);
-        const data = await getHoldings(); // always array
-        setRawHoldings(data);
+        setLoading(true);
 
-        // 👉 IMPORTANT: empty holdings is a VALID state
-        if (data.length === 0) {
-          setPrices({});
+        const response = await getPortfolioData();
+
+        setHoldings(response.holdings || []);
+        setSectorAllocation(response.sectorAllocation || []);
+        setSectorProfit(response.sectorProfit || []);
+
+      } catch (error) {
+          console.log("Error fetching portfolio data", error);
           setHoldings([]);
-        }
-      } catch (err) {
-        console.error("Error fetching holdings", err);
-        setRawHoldings([]);
-        setPrices({});
-        setHoldings([]);
-      } finally {
-        setLoadingHoldings(false);
+          setSectorAllocation([]);
+          setSectorProfit([]);
+      }finally{
+        setLoading(false);
       }
-    };
+    }
 
-    fetchHoldings();
-  }, []);
-
-  /* ---------------------------
-     2️⃣ Fetch prices (bulk)
-     --------------------------- */
-  useEffect(() => {
-    if (rawHoldings.length === 0) return;
-
-    const fetchPrices = async () => {
-      try {
-        setLoadingPrices(true);
-
-        const symbols = rawHoldings.map(h => h.symbol);
-        const priceResponse = await getPrice(symbols);
-
-        const marketDataMap = {};
-
-        priceResponse.data.forEach(p => {
-          marketDataMap[p.symbol] ={
-            lastPrice: p.lastPrice,
-            sector: p.sector
-          };
-        });
-
-        setPrices(marketDataMap);
-      } catch (err) {
-        console.error("Error fetching prices", err);
-        setPrices({});
-      } finally {
-        setLoadingPrices(false);
-      }
-    };
-
-    fetchPrices();
-  }, [rawHoldings]);
-
-  
-  
-
-  /* ---------------------------
-     3️⃣ Merge holdings + prices
-     --------------------------- */
-  useEffect(() => {
-    if (!rawHoldings.length) return;
-
-    const merged = rawHoldings.map(h => {
-
-      //destrctruing price for lastPrice and sectory
-      const market = prices[h.symbol] || {};
-      const currentPrice = market.lastPrice || 0;
-      const sector = market.sector || "Other";
-
-      const qty = Number(h.Quantity);
-      const avg = Number(h.avgBuyPrice);
-
-      
-
-      return {
-        id: h._id,
-        symbol: h.symbol,
-        qty,
-        avgPrice: avg,
-        currentPrice,
-        totalInvest: avg * qty,
-        currentValue: currentPrice * qty,
-        pnl: (currentPrice - avg) * qty,
-        sector
-      };
-    });
-
-    setHoldings(merged);
-  }, [rawHoldings, prices]);
-
- 
-   //sector allocations
-
-  useEffect(() => {
-  if (!holdings.length) {
-    setSectorAllocation([]);
-    return;
-  }
-  const sectorMap = {};
-  let totalValue = 0;
-
-  holdings.forEach(h => {
-    totalValue += h.currentValue;
-    const sector = h.sector;
-    sectorMap[sector] =
-      (sectorMap[sector] || 0) + h.currentValue;
-  });
-
-  const allocation = Object.entries(sectorMap).map(
-    ([sector, value]) => ({
-      name: sector,
-      value: Number(((value / totalValue) * 100).toFixed(2))
-    })
-  );
-  setSectorAllocation(allocation);
-}, [holdings]);
-
-//secotr wise profit
-
-useEffect(() => {
-  if (!holdings.length) {
-    setSectorProfit([]);
-    return;
-  }
-
-  const profitMap = {};
-
-  holdings.forEach(h => {
-    const sector = h.sector || "Other";
-    profitMap[sector] =
-      (profitMap[sector] || 0) + h.pnl;
-  });
-
-  const result = Object.entries(profitMap).map(
-    ([sector, profit]) => ({
-      sector,
-      profit: Number(profit.toFixed(2))
-    })
-  );
-
-  setSectorProfit(result);
-}, [holdings]);
-
-
-
-
-  /* ---------------------------
-     Final loading state
-     --------------------------- */
-  const loading = loadingHoldings || loadingPrices;
+    fetchProtfolioData();
+  },[]);
 
   return (
-    <HoldingContext.Provider value={{ holdings, sectorAllocation, sectorProfit, loading }}>
+    <HoldingsContext.Provider value={{ holdings, sectorAllocation, sectorProfit, loading }}>
       {children}
-    </HoldingContext.Provider>
+    </HoldingsContext.Provider>
   );
 };
 
-export const useHoldings = () => useContext(HoldingContext);
+
+export const useHoldings = () => useContext(HoldingsContext);

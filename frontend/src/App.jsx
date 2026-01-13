@@ -10,6 +10,7 @@ import ExportData from './pages/ExportData'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
 import { TransactionProvider } from './context/TransactionContext'
+import { DashboardProvider } from './context/DashboardContext'
 import { HoldingProvider } from './context/HoldingsContext'
 import { ChartProvider } from './context/ChartContext'
 import { ThemeProvider } from './context/ThemeContext'
@@ -109,17 +110,19 @@ function App() {
   return (
     <ThemeProvider>
       <NotificationProvider>
-        <TransactionProvider>
-          <HoldingProvider>
-            <AuthProvider>
-              <ChartProvider>
-                <Router>
-                  <AppRoutes />
-                </Router>
-              </ChartProvider>
-            </AuthProvider>
-          </HoldingProvider>
+        <DashboardProvider>
+          <TransactionProvider>
+            <HoldingProvider>
+              <AuthProvider>
+                <ChartProvider>
+                  <Router>
+                    <AppRoutes />
+                  </Router>
+                </ChartProvider>
+              </AuthProvider>
+            </HoldingProvider>
         </TransactionProvider>
+        </DashboardProvider>
       </NotificationProvider>
     </ThemeProvider>
   )

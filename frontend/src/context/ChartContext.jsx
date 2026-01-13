@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { getPortfolioValueHistory } from "../APIs/ChartApi";
+import { getPortfolioData } from "../APIs/holdings";
 
 const ChartContext = createContext(null);
 
@@ -33,8 +34,12 @@ export const ChartProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      const data = await getPortfolioValueHistory();
-      setPortfolioHistory(normalizePortfolioHistory(data || []));
+      const response = await getPortfolioData();
+
+
+
+
+      setPortfolioHistory(normalizePortfolioHistory(response.portfolioHistory || []));
     } catch (err) {
       console.error("Error fetching portfolio chart history", err);
       setError("Failed to load chart data");
