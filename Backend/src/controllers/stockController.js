@@ -123,7 +123,6 @@ export const getStockDetails = async (req, res, next) => {
     if (!id) {
       throw new ApiError(400, "Stock symbol is required");
     }
-    console.log(id)
 
     // ✅ Call service (all business logic there)
     const stockData = await getStockDetailsService({ userId, id  });

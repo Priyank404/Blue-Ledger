@@ -8,7 +8,7 @@ import { createStockSnapshots } from "../services/stockSnapShotServices.js";
  */
 export const startStockSnapshotCron = () => {
   cron.schedule(
-    "0 16 * * *", // 4:00 PM IST
+    "0 16 * * 1-5", // 4:00 PM IST
     async () => {
       logger.info("Daily stock price snapshot cron started");
 

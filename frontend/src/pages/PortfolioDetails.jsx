@@ -237,7 +237,7 @@ const PortfolioDetails = () => {
           </div>
 
           {/* Price Comparison Chart */}
-          {/* <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Price vs Average Buy Price</h2>
             {priceComparisonData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -281,7 +281,7 @@ const PortfolioDetails = () => {
                 <p className="text-gray-500 dark:text-gray-400">No data available</p>
               </div>
             )}
-          </div> */}
+          </div>
 
           {/* Value Over Time */}
           {/* <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
