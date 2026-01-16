@@ -118,14 +118,15 @@ export const getPriceBulkCached = async (req, res, next) =>{
 export const getStockDetails = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { symbol } = req.params;
+    const { id  } = req.params;
 
-    if (!symbol) {
+    if (!id) {
       throw new ApiError(400, "Stock symbol is required");
     }
+    console.log(id)
 
     // ✅ Call service (all business logic there)
-    const stockData = await getStockDetailsService({ userId, symbol });
+    const stockData = await getStockDetailsService({ userId, id  });
 
     return res.status(200).json(
       new ApiResponse(200, stockData, "Stock details fetched successfully")

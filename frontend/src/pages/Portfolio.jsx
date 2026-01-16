@@ -31,6 +31,7 @@ const Portfolio = () => {
   
 
   const { dashboardData, loading} = useDashboard();
+  console.log(dashboardData);
 
   const {
       totalInvestment,
@@ -91,8 +92,6 @@ const Portfolio = () => {
   
   
 
-
-
   // Filter stock holdings
   const filteredHoldings = dashboardData.holdings.filter((holding) => {
     const matchesSearch = holding.symbol.toLowerCase().includes(searchStock.toLowerCase())
@@ -105,7 +104,6 @@ const Portfolio = () => {
     const matchesPnlType = !pnlFilter || 
                           (pnlFilter === 'profit' && holding.pnl > 0) ||
                           (pnlFilter === 'loss' && holding.pnl < 0)
-    
     return matchesSearch && matchesQty && matchesPrice && matchesPnl && matchesPnlType
   })
 
