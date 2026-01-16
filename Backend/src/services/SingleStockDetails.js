@@ -58,6 +58,32 @@ export const getStockDetailsService = async ({ userId, id  }) => {
     // 5. Get price history (from snapshots)
     const priceHistory = await getStockHistory({ symbol: holding.symbol });
 
+    const priceComparisonData = priceHistory.map((h) => ({
+      date: h.date,
+      currentPrice: Number(h.price),
+      avgBuyPrice: avgPrice
+    }));
+
+    const valueOverTime = priceHistory.map((h) => ({
+      date: h.date,
+      value: Number(h.price) * qty,
+      avgBuyValue: avgPrice * qty
+    }));
+
+    const pnlOverTime = priceHistory.map((h) => {
+    const currentValueAtThatDay = Number(h.price) * qty;
+    const pnlDay = currentValueAtThatDay - totalInvest;
+
+    const pnlPercent =
+      totalInvest > 0 ? Number(((pnlDay / totalInvest) * 100).toFixed(2)) : 0;
+
+    return {
+      date: h.date,
+      pnl: Number(pnlDay.toFixed(2)),
+      pnlPercent
+    };
+  });
+
     // 6. Get transactions for this stock
     const transactions = await Transaction.find({
       Portfolio: portfolio._id,
@@ -90,6 +116,9 @@ export const getStockDetailsService = async ({ userId, id  }) => {
       roi,
       priceHistory,
       transactions: formattedTransactions,
+      priceComparisonData,
+      valueOverTime,
+      pnlOverTime,
       livePrice: livePriceData,
     };
 

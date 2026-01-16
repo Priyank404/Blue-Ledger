@@ -61,6 +61,9 @@ const PortfolioDetails = () => {
   const livePrice = stockData.livePrice || [];
   const PriceHistory = stockData.priceHistory || [];
   const stockTransactions = stockData.transactions || [];
+  const pnlOverTime = stockData.pnlOverTime || [];
+  const priceComparisonData = stockData.priceComparisonData || [];
+  const valueOverTime = stockData.valueOverTime || [];
 
 
     // Calculate additional metrics
@@ -284,7 +287,7 @@ const PortfolioDetails = () => {
           </div>
 
           {/* Value Over Time */}
-          {/* <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Holding Value Over Time</h2>
             {valueOverTime.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -340,10 +343,10 @@ const PortfolioDetails = () => {
                 <p className="text-gray-500 dark:text-gray-400">No data available</p>
               </div>
             )}
-          </div> */}
+          </div>
 
           {/* P&L Over Time */}
-          {/* <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Profit/Loss Trend</h2>
             {pnlOverTime.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -382,7 +385,7 @@ const PortfolioDetails = () => {
                 <p className="text-gray-500 dark:text-gray-400">No data available</p>
               </div>
             )}
-          </div> */}
+          </div>
         </div>
 
         {/* Additional Information */}
