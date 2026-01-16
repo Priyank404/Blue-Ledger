@@ -6,112 +6,45 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import TransactionsTable from '../components/TransactionsTable'
 import { useNotification } from '../context/NotificationContext'
 import { deleteTransaction } from '../APIs/transaction'
-import { useHoldings } from "../context/HoldingsContext"
-import { useTransactions } from "../context/TransactionContext";
+import { getSingleStokData } from '../APIs/singleStock'
 
 const PortfolioDetails = () => {
-  const { id } = useParams()
-  const [livePrice, setlivePrice] = useState([]);
-  const [PriceHistory, setPriceHistory] = useState([]);
-
- const { holdings, loading } = useHoldings();
- const { transactions, loading: transactionsLoading } = useTransactions();
-
-  const [showHistory, setShowHistory] = useState(false)
-  const [stockTransactionsList, setStockTransactionsList] = useState([])
+  const { id  } = useParams()
+  const [stockData, setstockData] = useState(null);
+  const [loading, setloading]= useState(true);
+  const [showHistory ,setshowHistory] = useState(false)
+ 
   const { showNotification } = useNotification()
 
-   const stockTransactions = stockTransactionsList
 
-
-//getting stock id
-  const stock = useMemo(() => {
-    return holdings.find(h => h.id === id);
-  }, [holdings, id]);
-
-
-//filtering stock
   useEffect(() => {
-  if (stock) {
-    const filtered = transactions.filter(
-    (t) => t.name === stock.symbol
-  );
-  setStockTransactionsList(filtered);
-  }
-}, [stock, transactions])
 
-  //fetching price of stock
-
-
-useEffect(() => {
-  if (!stock) return;
-
-  const fetchLive = async () => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/stock/${stock.symbol}/price`,
-        {
-          credentials: "include", // 🔥 THIS IS REQUIRED
-        }
-      );
-
-      if (!res.ok) {
-        throw new Error(`HTTP error ${res.status}`);
+    if (!id) return; 
+    const fetchData = async () =>  {
+      try {
+        setloading(true);
+        const data = await getSingleStokData(id);
+        console.log(data);
+        setstockData(data);
+      } catch (err) {
+        console.log("Error fetching stock details", err);
+        setstockData(null);
+      } finally {
+        setloading(false);
       }
+    };
 
-      const data = await res.json(); // ✅ IMPORTANT
-
-      setlivePrice(data.data || []); // depends on your backend response
-    } catch (err) {
-      console.error("Error fetching price history", err);
-      setlivePrice([]);
-    }
-  };
-
-  fetchLive();
-}, [stock]);
-
-//fetching history of the price 
-useEffect(() => {
-  if (!stock) return;
-
-  const fetchHistory = async () => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/stock/${stock.symbol}/history`,
-        {
-          credentials: "include", // 🔥 THIS IS REQUIRED
-        }
-      );
-
-      if (!res.ok) {
-        throw new Error(`HTTP error ${res.status}`);
-      }
-
-      const data = await res.json(); // ✅ IMPORTANT
-
-      setPriceHistory(data.data || []); // depends on your backend response
-    } catch (err) {
-      console.error("Error fetching price history", err);
-      setPriceHistory([]);
-    }
-  };
-
-  fetchHistory();
-}, [stock]);
-
+    fetchData();
+  }, [id]);
 
 
 //loading screen if the stock is loading
-  if (loading || transactionsLoading) {
+  if (loading) {
     return <DashboardLayout><p className="text-gray-900 dark:text-white">Loading...</p></DashboardLayout>;
   }
 
-  
- 
-
 // loading screen if stock not found
- if (!stock) {
+ if (!stockData) {
     return (
       <DashboardLayout>
         <div className="text-center py-12">
@@ -124,6 +57,12 @@ useEffect(() => {
     )
   }
 
+  const stock = stockData;
+  const livePrice = stockData.livePrice || [];
+  const PriceHistory = stockData.priceHistory || [];
+  const stockTransactions = stockData.transactions || [];
+
+
     // Calculate additional metrics
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
@@ -133,44 +72,7 @@ useEffect(() => {
     }).format(amount)
   }
 
-  const pnlPercentage = ((stock.pnl / stock.totalInvest) * 100).toFixed(2)
-  const priceChangeFromAvg = ((stock.currentPrice - stock.avgPrice) / stock.avgPrice * 100).toFixed(2)
-  const roi = ((stock.currentValue - stock.totalInvest) / stock.totalInvest * 100).toFixed(2)
   
-  // Calculate price change (from last price in history)
-  const lastPrice = livePrice.length > 0 ? livePrice[livePrice.length - 1].price : stock.currentPrice
-  const prevPrice = livePrice.length > 1 ? livePrice[livePrice.length - 2].price : stock.currentPrice
-  const dayChange = lastPrice - prevPrice
-  const dayChangePercent = prevPrice > 0 ? ((dayChange / prevPrice) * 100).toFixed(2) : '0.00'
-
-  // Prepare data for value over time chart
-  const valueOverTime = livePrice.map((entry) => ({
-    date: entry.date,
-    price: entry.price,
-    value: entry.price * stock.qty,
-    avgBuyPrice: stock.avgPrice,
-    avgBuyValue: stock.avgPrice * stock.qty,
-  }))
-
-  // Prepare data for price comparison chart
-  const priceComparisonData = livePrice.map((entry) => ({
-    date: entry.date,
-    currentPrice: entry.price,
-    avgBuyPrice: stock.avgPrice,
-  }))
-
-  // P&L calculation over time
-  const pnlOverTime = livePrice.map((entry) => {
-  const pnlValue = (entry.price - stock.avgPrice) * stock.qty;
-  const pnlPercent = (pnlValue / stock.totalInvest) * 100;
-
-  return {
-    date: entry.date,
-    pnl: Number(pnlValue),
-    pnlPercent: Number(pnlPercent.toFixed(2)),
-  };
-});
-
 
   // Buy/Sell distribution
   const buyCount = stockTransactions.filter((t) => t.type === 'BUY').length
@@ -244,16 +146,13 @@ useEffect(() => {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Price</p>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(stock.currentPrice)}</p>
-            <p className={`text-sm mt-1 font-semibold ${dayChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {/* <p className={`text-sm mt-1 font-semibold ${dayChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {dayChange >= 0 ? '+' : ''}{formatCurrency(dayChange)} ({dayChangePercent >= 0 ? '+' : ''}{dayChangePercent}%)
-            </p>
+            </p> */}
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Average Buy Price</p>
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(stock.avgPrice)}</p>
-            <p className={`text-sm mt-1 font-semibold ${priceChangeFromAvg >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {priceChangeFromAvg >= 0 ? '+' : ''}{priceChangeFromAvg}% from avg
-            </p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Quantity</p>
@@ -278,13 +177,13 @@ useEffect(() => {
               {stock.pnl >= 0 ? '+' : ''}{formatCurrency(stock.pnl)}
             </p>
             <p className={`text-sm mt-1 font-semibold ${stock.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {pnlPercentage >= 0 ? '+' : ''}{pnlPercentage}%
+              {stock.pnlPercentage   >= 0 ? '+' : ''}{stock.pnlPercentage}%
             </p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">ROI</p>
-            <p className={`text-2xl font-bold ${roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-              {roi >= 0 ? '+' : ''}{roi}%
+            <p className={`text-2xl font-bold ${stock.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              {stock.roi >= 0 ? '+' : ''}{stock.roi}%
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Return on Investment</p>
           </div>
@@ -338,7 +237,7 @@ useEffect(() => {
           </div>
 
           {/* Price Comparison Chart */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          {/* <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Price vs Average Buy Price</h2>
             {priceComparisonData.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -382,10 +281,10 @@ useEffect(() => {
                 <p className="text-gray-500 dark:text-gray-400">No data available</p>
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* Value Over Time */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          {/* <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Holding Value Over Time</h2>
             {valueOverTime.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -441,10 +340,10 @@ useEffect(() => {
                 <p className="text-gray-500 dark:text-gray-400">No data available</p>
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* P&L Over Time */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+          {/* <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Profit/Loss Trend</h2>
             {pnlOverTime.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -483,7 +382,7 @@ useEffect(() => {
                 <p className="text-gray-500 dark:text-gray-400">No data available</p>
               </div>
             )}
-          </div>
+          </div> */}
         </div>
 
         {/* Additional Information */}
@@ -510,13 +409,13 @@ useEffect(() => {
               <div className="flex justify-between pt-3 border-t dark:border-gray-700">
                 <span className="text-gray-600 dark:text-gray-400">Profit/Loss</span>
                 <span className={`font-semibold ${stock.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {stock.pnl >= 0 ? '+' : ''}{formatCurrency(stock.pnl)} ({pnlPercentage}%)
+                  {stock.pnl >= 0 ? '+' : ''}{formatCurrency(stock.pnl)} ({stock.pnlPercentage}%)
                 </span>
               </div>
               <div className="flex justify-between pt-3 border-t dark:border-gray-700">
                 <span className="text-gray-600 dark:text-gray-400">ROI</span>
-                <span className={`font-semibold ${roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {roi >= 0 ? '+' : ''}{roi}%
+                <span className={`font-semibold ${stock.roi >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {stock.roi >= 0 ? '+' : ''}{stock.roi}%
                 </span>
               </div>
             </div>
@@ -577,7 +476,7 @@ useEffect(() => {
                 Sell
               </button>
               <button 
-                onClick={() => setShowHistory(!showHistory)}
+                onClick={() => setshowHistory((prev) => !prev)}
                 className="w-full px-4 py-3 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors shadow-md"
               >
                 {showHistory ? 'Hide History' : 'View Full History'}
@@ -587,13 +486,13 @@ useEffect(() => {
         </div>
 
         {/* Transaction History */}
-        {showHistory && stockTransactions.length > 0 && (
+        {showHistory && stock.transactions.length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Transaction History for {stock.symbol}
             </h3>
             <TransactionsTable 
-              transactions={stockTransactions} 
+              transactions={stock.transactions} 
               showAll={true} 
               showDelete={true}
               onDelete={handleDeleteTransaction}

@@ -6,24 +6,25 @@ import { getStockHistory } from "./stockSnapShotServices.js";
 import { cacheGet, cacheSet } from "../configs/redis.js";
 import logger from "../utilities/logger.js";
 import ApiError from "../utilities/apiError.js";
+import mongoose from "mongoose";
 
 /**
  * Get complete stock details for individual stock page
  * Includes: holding data, live price, P/L calculations, price history, transactions
  * Uses Redis caching (5 minutes TTL)
  */
-export const getStockDetailsService = async ({ userId, symbol }) => {
-  const cacheKey = `stock:${userId}:${symbol}`;
+export const getStockDetailsService = async ({ userId, id  }) => {
+  const cacheKey = `stock:${userId}:${id}`;
 
   try {
     // Check cache
     const cached = await cacheGet(cacheKey);
     if (cached) {
-      logger.info("Stock details cache HIT", { userId, symbol });
+      logger.info("Stock details cache HIT", { userId, id  });
       return cached;
     }
 
-    logger.info("Stock details cache MISS", { userId, symbol });
+    logger.info("Stock details cache MISS", { userId, id  });
 
     // 1. Get user's portfolio
     const portfolio = await Portfolio.findOne({ user: userId });
@@ -34,11 +35,11 @@ export const getStockDetailsService = async ({ userId, symbol }) => {
     // 2. Get holding by symbol
     const holding = await Holdings.findOne({
       Portfolio: portfolio._id,
-      symbol: symbol,
+      _id: new mongoose.Types.ObjectId(id)
     });
 
     if (!holding) {
-      throw new ApiError(404, `You don't own ${symbol}`);
+      throw new ApiError(404, `Holding not found or not owned by you`);
     }
 
     // 3. Get live price (cached)
@@ -51,8 +52,8 @@ export const getStockDetailsService = async ({ userId, symbol }) => {
     const totalInvest = avgPrice * qty;
     const currentValue = currentPrice * qty;
     const pnl = currentValue - totalInvest;
-    const pnlPercentage = totalInvest > 0 ? ((pnl / totalInvest) * 100).toFixed(2) : "0.00";
-    const roi = totalInvest > 0 ? ((pnl / totalInvest) * 100).toFixed(2) : "0.00";
+    const pnlPercentage = totalInvest > 0 ? Number(((pnl / totalInvest) * 100).toFixed(2)) : "0.00";
+    const roi = totalInvest > 0 ? Number(((pnl / totalInvest) * 100).toFixed(2)) : "0.00";
 
     // 5. Get price history (from snapshots)
     const priceHistory = await getStockHistory({ symbol: holding.symbol });
