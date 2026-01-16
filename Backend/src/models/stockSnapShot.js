@@ -16,7 +16,7 @@ const StockPriceSnapshotSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-StockPriceSnapshotSchema.index({ symbol: 1, date: 1 });
+StockPriceSnapshotSchema.index({ symbol: 1, date: 1 },{ unique: true });
 
 export const StockPriceSnapshot = mongoose.model(
   "StockPriceSnapshot",

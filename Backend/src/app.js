@@ -10,6 +10,7 @@ import dashboardRoutes from './Routes/dashboardRoute.js'
 import cookieParser from 'cookie-parser';
 import cors from "cors";
 import globalErrorHandler from './middleWares/globalApiError.js';
+import { startStockSnapshotCron } from './cron/stockSnapShotCron.js';
 
 
 
@@ -40,5 +41,6 @@ app.use('/api/export', exportRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 
 app.use(globalErrorHandler)
+startStockSnapshotCron()
 
 export default app;
