@@ -1,5 +1,5 @@
 import logger from "../utilities/logger.js";
-import { cahceDelPattern } from "../configs/redis.js";
+import { cacheDelPattern } from "../configs/redis.js";
 import { Transaction } from "../models/transactionSchema.js";
 import { Portfolio } from "../models/portfolioSchema.js";
 import mongoose from "mongoose";
