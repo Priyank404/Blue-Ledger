@@ -9,11 +9,15 @@ export const createPortfolioSnapshot = async ({ portfolioId }) => {
     // 1. Get current holdings
     const holdings = await Holdings.find({ Portfolio: portfolioId });
 
+    const now = new Date();
+    const ist = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const day = ist.toISOString().slice(0, 10);
+
     if (!holdings || holdings.length === 0) {
       // Portfolio exists but no holdings → value = 0
       await PortfolioSnapshot.create({
         portfolio: portfolioId,
-        date: new Date(),
+        day: day,
         value: 0
       });
       return;
@@ -37,17 +41,19 @@ export const createPortfolioSnapshot = async ({ portfolioId }) => {
       const price = priceMap[h.symbol] || 0;
       totalValue += price * h.Quantity;
     }
+    const roundedValue = Number(totalValue.toFixed(2));
 
     // 5. Save snapshot
-    await PortfolioSnapshot.create({
-      portfolio: portfolioId,
-      date: new Date(),
-      value: totalValue
-    });
+    await PortfolioSnapshot.updateOne(
+      { portfolio: portfolioId, day },     // filter
+      { $set: { value: roundedValue, date: ist } },  // update
+      { upsert: true }
+    );
 
+    
     logger.info("Portfolio snapshot created", {
       portfolioId,
-      value: totalValue
+      value: roundedValue
     });
   } catch (error) {
     // IMPORTANT: snapshot must NEVER break transactions
@@ -62,8 +68,8 @@ export const getPortfolioHistory = async ({ userId }) => {
 
   const snapshots = await PortfolioSnapshot.find(
     { portfolio: portfolio._id },
-    { date: 1, value: 1, _id: 0 }
-  ).sort({ date: 1 });
+    { day: 1, value: 1, _id: 0 }
+  ).sort({ day: 1 });
 
   return snapshots;
 };

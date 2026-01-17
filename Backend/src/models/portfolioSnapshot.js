@@ -6,9 +6,9 @@ const PortfolioSnapshotSchema  = new mongoose.Schema({
         ref: "Portfolio",
         required: true
     },
-    date: {
-      type: Date,
-      required: true
+    day: { 
+      type: String,
+      required: true 
     },
     value: {
       type: Number,
@@ -19,6 +19,6 @@ const PortfolioSnapshotSchema  = new mongoose.Schema({
 );
 
 // Optional but recommended for charts
-PortfolioSnapshotSchema.index({ portfolio: 1, date: 1 });
+PortfolioSnapshotSchema.index({ portfolio: 1, day: 1 },{unique: true});
 
 export const PortfolioSnapshot = mongoose.model("PortfolioSnapshot", PortfolioSnapshotSchema )

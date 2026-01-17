@@ -187,16 +187,12 @@ const Dashboard = () => {
             Overall Portfolio Graph
           </h2>
 
-          {portfolioHistory ? (
-            <p className="text-gray-500 dark:text-gray-400">
-              No portfolio history yet
-            </p>
-          ) : (
+          {portfolioHistory ?  (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={portfolioHistory}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
-                  dataKey="date"
+                  dataKey="day"
                   tickFormatter={(value) =>
                     new Date(value).toLocaleDateString('en-IN', {
                       month: 'short',
@@ -224,7 +220,11 @@ const Dashboard = () => {
                 />
               </LineChart>
             </ResponsiveContainer>
-          )}
+          ):(
+            <p className="text-gray-500 dark:text-gray-400">
+              No portfolio history yet
+            </p>
+          ) }
         </div>
 
         {/* PROFIT & LOSS CONTRIBUTION (DUAL PIE) */}
