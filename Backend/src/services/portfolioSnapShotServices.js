@@ -87,5 +87,6 @@ export const getPortfolioHistory = async ({ userId }) => {
     .filter(x => x.day);
 
   normalized.sort((a, b) => a.day.localeCompare(b.day));
+  console.log(normalized)
   return normalized;
 };
