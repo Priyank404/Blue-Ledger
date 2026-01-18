@@ -68,25 +68,32 @@ export const getPortfolioHistory = async ({ userId }) => {
 
   if (!portfolio) return [];
 
-  const snapshots = await PortfolioSnapshot.find(
-    { portfolio: portfolio._id },
-    { day: 1, date: 1, value: 1, _id: 0 }
-  ).sort({ day: 1, date: 1 });
+  console.log("portfolioId:", portfolio._id.toString());
 
-  const normalized = snapshots
-    .map(s => {
-      let day = s.day;
+  const count = await PortfolioSnapshot.countDocuments({ portfolio: portfolio._id });
+  console.log("snapshots count:", count);
 
-      // ✅ old docs fallback
-      if (!day && s.date) {
-        day = new Date(s.date).toISOString().slice(0, 10);
+  const snapshots = await PortfolioSnapshot.aggregate([
+    { $match: { portfolio: portfolio._id } },
+    {
+      $project: {
+        _id: 0,
+        value: 1,
+        day: {
+          $ifNull: [
+            "$day",
+            {
+              $dateToString: {
+                format: "%Y-%m-%d",
+                date: "$date"
+              }
+            }
+          ]
+        }
       }
+    },
+    { $sort: { day: 1 } }
+  ]);
 
-      return { day, value: s.value };
-    })
-    .filter(x => x.day);
-
-  normalized.sort((a, b) => a.day.localeCompare(b.day));
-  console.log(normalized)
-  return normalized;
+  return snapshots;
 };
