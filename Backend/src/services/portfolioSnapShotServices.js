@@ -75,23 +75,39 @@ export const getPortfolioHistory = async ({ userId }) => {
 
   const snapshots = await PortfolioSnapshot.aggregate([
     { $match: { portfolio: portfolio._id } },
+
+    // normalize day
     {
-      $project: {
-        _id: 0,
-        value: 1,
-        day: {
+      $addFields: {
+        normalizedDay: {
           $ifNull: [
             "$day",
-            {
-              $dateToString: {
-                format: "%Y-%m-%d",
-                date: "$date"
-              }
-            }
+            { $dateToString: { format: "%Y-%m-%d", date: "$date" } }
           ]
         }
       }
     },
+
+    // sort latest first (so latest value wins)
+    { $sort: { date: -1 } },
+
+    // group one per day
+    {
+      $group: {
+        _id: "$normalizedDay",
+        value: { $first: "$value" }
+      }
+    },
+
+    // shape response
+    {
+      $project: {
+        _id: 0,
+        day: "$_id",
+        value: 1
+      }
+    },
+
     { $sort: { day: 1 } }
   ]);
 
