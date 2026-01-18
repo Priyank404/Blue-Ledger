@@ -278,7 +278,7 @@ const Portfolio = () => {
               </defs>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
-                dataKey="date"
+                dataKey="day"
                 tick={{ fontSize: 12 }}
                 tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               />
