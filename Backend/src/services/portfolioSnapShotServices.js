@@ -43,6 +43,8 @@ export const createPortfolioSnapshot = async ({ portfolioId }) => {
     }
     const roundedValue = Number(totalValue.toFixed(2));
 
+    
+
     // 5. Save snapshot
     await PortfolioSnapshot.updateOne(
       { portfolio: portfolioId, day },     // filter
@@ -68,8 +70,22 @@ export const getPortfolioHistory = async ({ userId }) => {
 
   const snapshots = await PortfolioSnapshot.find(
     { portfolio: portfolio._id },
-    { day: 1, value: 1, _id: 0 }
-  ).sort({ day: 1 });
+    { day: 1, date: 1, value: 1, _id: 0 }
+  ).sort({ day: 1, date: 1 });
 
-  return snapshots;
+  const normalized = snapshots
+    .map(s => {
+      let day = s.day;
+
+      // ✅ old docs fallback
+      if (!day && s.date) {
+        day = new Date(s.date).toISOString().slice(0, 10);
+      }
+
+      return { day, value: s.value };
+    })
+    .filter(x => x.day);
+
+  normalized.sort((a, b) => a.day.localeCompare(b.day));
+  return normalized;
 };
