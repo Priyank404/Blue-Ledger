@@ -64,9 +64,7 @@ const PortfolioDetails = () => {
   const pnlOverTime = stockData.pnlOverTime || [];
   const priceComparisonData = stockData.priceComparisonData || [];
   const valueOverTime = stockData.valueOverTime || [];
-  console.log(pnlOverTime)
-  console.log(valueOverTime)
-  console.log(priceComparisonData)
+
 
 
     // Calculate additional metrics

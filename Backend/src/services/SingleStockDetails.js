@@ -57,7 +57,7 @@ export const getStockDetailsService = async ({ userId, id  }) => {
 
     // 5. Get price history (from snapshots)
     const priceHistory = await getStockHistory({ symbol: holding.symbol });
-    console.log("this is from single stock service: ",priceHistory)
+
 
     const priceComparisonData = priceHistory.map((h) => ({
       date: h.date,
