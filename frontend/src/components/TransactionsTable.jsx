@@ -42,7 +42,7 @@ const TransactionsTable = ({ transactions, showAll = false, onDelete = null, sho
                   {formatDate(transaction.date)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                  {transaction.name}
+                  {transaction.symbol}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
