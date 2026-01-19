@@ -60,13 +60,13 @@ export const getStockDetailsService = async ({ userId, id  }) => {
     console.log(priceHistory)
 
     const priceComparisonData = priceHistory.map((h) => ({
-      date: h.day,
+      date: h.date,
       currentPrice: Number(h.price),
       avgBuyPrice: avgPrice
     }));
 
     const valueOverTime = priceHistory.map((h) => ({
-      date: h.day,
+      date: h.date,
       value: Number(h.price) * qty,
       avgBuyValue: avgPrice * qty
     }));
@@ -79,7 +79,7 @@ export const getStockDetailsService = async ({ userId, id  }) => {
       totalInvest > 0 ? Number(((pnlDay / totalInvest) * 100).toFixed(2)) : 0;
 
     return {
-      date: h.day,
+      date: h.date,
       pnl: Number(pnlDay.toFixed(2)),
       pnlPercent
     };

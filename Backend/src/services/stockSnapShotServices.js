@@ -80,6 +80,7 @@ export const getStockHistory = async ({ symbol }) => {
     { symbol },
     { date: 1, price: 1, _id: 0 }
   ).sort({ date: 1 });
+  console.log(snapshots)
 
   return snapshots;
 };
