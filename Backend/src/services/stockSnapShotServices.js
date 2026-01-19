@@ -18,7 +18,12 @@ export const createStockSnapshots = async () => {
     // 2️⃣ Fetch live prices (bulk)
     const prices = await BulkPrice({ symbols });
 
+    logger.info("Symbols from holdings", symbols);
+    logger.info("Symbols returned from BulkPrice", prices.map(p => p.symbol));
+
+
     
+
 
     // 3️⃣ Save snapshot PER STOCK PER DAY
 
@@ -30,6 +35,7 @@ export const createStockSnapshots = async () => {
       date: today,
       price: p.lastPrice
     }));
+    logger.info("Snapshots ready to insert", snapshots.slice(0, 3));
 
     const bulkOps = snapshots.map(s => ({
       updateOne: {
@@ -39,8 +45,11 @@ export const createStockSnapshots = async () => {
       }
     }));
 
+    
+    
     const result = await StockPriceSnapshot.bulkWrite(bulkOps);
-
+    logger.info("Bulk write result", result);
+    
     for (const sym of symbols) {
       const oldDocs = await StockPriceSnapshot.find({ symbol: sym })
         .sort({ date: -1 })     // newest first
@@ -57,6 +66,10 @@ export const createStockSnapshots = async () => {
         });
       }
     }
+
+    const count = await StockPriceSnapshot.countDocuments();
+    logger.info("Total snapshot docs in DB", { count });
+
 
     logger.info("Stock price snapshots created + trimmed", {
       symbolsCount: symbols.length,
