@@ -1,6 +1,6 @@
 # 📊 Blue Ledger
 
-A full-stack **Blue Ledger** web application that helps users manage, track, and analyze their investment portfolio.
+A full-stack **Blue Ledger** web application that helps users manage, track, and analyze their investment portfolio.  
 Built with a modern **frontend + backend** architecture following real-world production practices.
 
 🔗 **Live Demo**: https://portfolio-tracker-two-ruby.vercel.app/  
@@ -14,6 +14,7 @@ Built with a modern **frontend + backend** architecture following real-world pro
 - 📈 Track Buy & Sell Transactions
 - 🧾 View Holdings and Portfolio Summary
 - 📊 Interactive Charts for Portfolio Performance
+- ⚡ Redis Caching for faster API responses (Upstash Redis)
 - 📥 Export Data (CSV / JSON)
 - 🔔 Notifications for user actions
 - 📱 Fully Responsive UI
@@ -49,11 +50,13 @@ Portfolio-Tracker/
 - MongoDB
 - JWT Authentication
 - REST APIs
+- Redis Caching (Upstash Redis)
 
 ### Tools & Deployment
 - Git & GitHub
 - Vercel (Frontend)
 - MongoDB (Local / Atlas)
+- Upstash Redis (Caching)
 
 ---
 
@@ -82,12 +85,20 @@ Create a `.env` file inside the **backend** folder:
 PORT=5000
 MONGO_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret
+
+# Redis (Upstash)
+REDIS_URL=your_upstash_redis_url
+REDIS_TOKEN=your_upstash_redis_token
 ```
 
 Backend runs on:
 ```
 http://localhost:5000
 ```
+
+✅ **Note:** Redis caching is enabled using **Upstash Redis**.  
+If you don’t have Redis credentials, create a free database here:  
+https://upstash.com/
 
 ---
 
@@ -111,9 +122,10 @@ http://localhost:5173
 1. User signs up / logs in
 2. User adds buy & sell transactions
 3. Backend stores and processes data
-4. Holdings and portfolio value are calculated
-5. Charts visualize portfolio performance
-6. User can export portfolio data
+4. Redis caches expensive portfolio calculations (Upstash)
+5. Holdings and portfolio value are calculated
+6. Charts visualize portfolio performance
+7. User can export portfolio data
 
 ---
 
@@ -122,6 +134,7 @@ http://localhost:5173
 - MERN stack project architecture
 - Secure JWT authentication
 - Production-style backend services
+- Redis caching for faster performance (Upstash Redis)
 - Context API state management
 - Frontend–Backend integration
 - Data visualization with charts
@@ -163,4 +176,3 @@ GitHub: https://github.com/Priyank404
 ---
 
 ⭐ If you like this project, please **star the repository**!
-
