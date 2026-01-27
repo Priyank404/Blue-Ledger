@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt"
 import crypto from "crypto"
-import { otp } from "../models/otpSchema"
+import { otp } from "../models/otpSchema.js"
 
 const OtpExpiry = 5;
 const MaxAttemp = 3;
@@ -16,11 +16,12 @@ export const otpGenerator = async(email)=>{
 
     await otp.create({
         email,
-        otp : hash,
-        expiry
+        otpHash : hash,
+        expiry,
+
     })
 
-    return otp
+    return Otp
 }
 
 
