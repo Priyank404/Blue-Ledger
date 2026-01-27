@@ -19,7 +19,7 @@ const otpSchema = new mongoose.Schema({
 
     attempts:{
         type:Number,
-        required: true
+        default: 0
     }
 })
 
