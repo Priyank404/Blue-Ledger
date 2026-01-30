@@ -98,10 +98,39 @@ const getUserById = async (userId) => {
   return user;
 };
 
+
+
+
+const loginWithOtp = async (email) => {
+
+  let user = await User.findOne({ email });
+
+  let isNewUser = false;
+
+  if (!user) {
+    user = await User.create({ email });
+    const token = jwt.sign({
+        id: user._id,
+        email: user.email
+    }, process.env.JWT_SECRET_KEY, {expiresIn: '1d'});
+    isNewUser = true;
+  }
+
+  return {
+        user:{
+        id: user._id,
+        email: user.email
+        },
+        token,
+        isNewUser
+    };
+};
+
 const authServices = {
   registerUser,
   logInUser,
-  getUserById
+  getUserById,
+  loginWithOtp
 };
 
 export default authServices;

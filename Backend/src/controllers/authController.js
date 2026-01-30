@@ -1,6 +1,7 @@
 import logger from "../utilities/logger.js"
 import authServices from '../services/authServices.js';
 import ApiResponse from "../utilities/apiResponse.js";
+import { otpVerify } from "../services/otpServices.js";
 
 
 export const signUp = async (req, res, next) =>{
@@ -102,3 +103,40 @@ export const getMe = async (req, res, next) => {
     next(error);
   }
 };
+
+
+export const verifyOtpLogin = async (req, res, next) => {
+  try {
+
+    const { email, otp } = req.body;
+
+    logger.info("OTP verification attempted", { email });
+
+    await otpVerify(email, otp);
+
+    const result = await authServices.loginWithOtp(email);
+
+    if (result.isNewUser) {
+      await sendWelcomeEmail(email);
+    }
+
+    res.cookie('token', result.token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
+    logger.info("OTP login successful", { email });
+
+    return res.status(200).json(
+      new ApiResponse(200, result.user, "success")
+    );
+
+  } catch (error) {
+    logger.error("OTP login failed", { error });
+    next(error);
+  }
+};
+
+

@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt"
 import crypto from "crypto"
+import { User } from "../models/userSchema.js";
 import { otp } from "../models/otpSchema.js"
 
 const OtpExpiry = 5;
@@ -18,16 +19,18 @@ export const otpGenerator = async(email)=>{
         email,
         otpHash : hash,
         expiry,
-
+        
     })
 
     return Otp
 }
 
 
-export const otyVerify = async(email, Otp)=>{
+export const otpVerify = async(email, Otp)=>{
     
     const found = await otp.findOne({email});
+
+    
 
     if(!found) throw new Error("Otp not found");
 
@@ -35,7 +38,7 @@ export const otyVerify = async(email, Otp)=>{
 
     if(found.attempts > MaxAttemp) throw new Error("Otp attempts exceeded");
 
-    const isValidOtp = await bcrypt.compare(Otp, found.otp);
+    const isValidOtp = await bcrypt.compare(Otp, found.otpHash);
 
     if(!isValidOtp){
         found.attempts += 1;
