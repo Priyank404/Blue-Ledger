@@ -7,7 +7,6 @@ import portfolioRoutes from './Routes/portfolioRoutes.js'
 import exportRoutes from './Routes/exportRoutes.js'
 import settingRoutes from './Routes/settingRoutes.js'
 import dashboardRoutes from './Routes/dashboardRoute.js'
-import otpRoutes from './Routes/otpRoutes.js'
 import cookieParser from 'cookie-parser';
 import cors from "cors";
 import globalErrorHandler from './middleWares/globalApiError.js';
@@ -27,7 +26,8 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-
+console.log("EMAIL:", process.env.EMAIL_USER);
+console.log("PASS:", process.env.EMAIL_PASS ? "LOADED" : "MISSING");
 
 
 
@@ -41,7 +41,7 @@ app.use('/api/portfolio', portfolioRoutes)
 app.use('/api/users', settingRoutes)
 app.use('/api/export', exportRoutes)
 app.use('/api/dashboard', dashboardRoutes)
-app.use('/api/otp', otpRoutes)
+
 
 app.use(globalErrorHandler)
 startStockSnapshotCron()

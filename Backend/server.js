@@ -1,5 +1,4 @@
-import dotenv from 'dotenv';
-dotenv.config();
+import "./src/configs/env.js"
 import app from './src/app.js';
 import logger from './src/utilities/logger.js';
 import connectDB from './src/configs/databaseConnection.js';
@@ -10,12 +9,13 @@ const PORT = process.env.PORT
 
 
 
+
 connectDB().then(()=>{
         try {
             app.listen(PORT,()=>{
                 logger.info(`Server running on port ${PORT}`);
             });
-            startPortfolioSnapshotCron();
+
         } catch (error) {
             logger.error("Error starting node server", {error})
         }
@@ -24,4 +24,6 @@ connectDB().then(()=>{
     logger.error("Error connecting to database", {error});
 });
 
-startPortfolioSnapshotCron();
+
+process.on("exit", () => console.log("NODE EXITED"));
+process.on("uncaughtException", err => console.log(err));
