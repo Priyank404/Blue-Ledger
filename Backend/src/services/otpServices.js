@@ -1,12 +1,12 @@
 import bcrypt from "bcrypt"
 import crypto from "crypto"
-import { User } from "../models/userSchema.js";
 import { otp } from "../models/otpSchema.js"
 
 const OtpExpiry = 5;
 const MaxAttemp = 3;
 
 export const otpGenerator = async(email)=>{
+    console.log(email)
     const Otp = crypto.randomInt(100000 , 999999).toString();  
 
     const hash = await bcrypt.hash(Otp,10)
@@ -26,11 +26,13 @@ export const otpGenerator = async(email)=>{
 }
 
 
-export const otpVerify = async(email, Otp)=>{
-    
-    const found = await otp.findOne({email});
+export const otpVerify = async(userEmail, userOtp)=>{
 
     
+    
+    const found = await otp.findOne({email: userEmail.toLowerCase().trim()});
+
+   
 
     if(!found) throw new Error("Otp not found");
 
@@ -38,15 +40,16 @@ export const otpVerify = async(email, Otp)=>{
 
     if(found.attempts > MaxAttemp) throw new Error("Otp attempts exceeded");
 
-    const isValidOtp = await bcrypt.compare(Otp, found.otpHash);
+    const isValidOtp = await bcrypt.compare(userOtp, found.otpHash);
+
 
     if(!isValidOtp){
         found.attempts += 1;
         await found.save();
         throw new Error("Invalid Otp");
     }
-
-    await otp.deleteOne({email});
+    
+    await otp.deleteOne({email:userEmail});
 
     return true
 }

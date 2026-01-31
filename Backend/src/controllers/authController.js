@@ -2,6 +2,7 @@ import logger from "../utilities/logger.js"
 import authServices from '../services/authServices.js';
 import ApiResponse from "../utilities/apiResponse.js";
 import { otpVerify } from "../services/otpServices.js";
+import {sendWelcomEmail} from "../services/emailServices.js"
 
 
 export const signUp = async (req, res, next) =>{
@@ -114,10 +115,11 @@ export const verifyOtpLogin = async (req, res, next) => {
 
     await otpVerify(email, otp);
 
+
     const result = await authServices.loginWithOtp(email);
 
     if (result.isNewUser) {
-      await sendWelcomeEmail(email);
+      await sendWelcomEmail(email);
     }
 
     res.cookie('token', result.token, {

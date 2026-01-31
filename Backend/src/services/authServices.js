@@ -1,7 +1,7 @@
 
 import bcrypt from 'bcrypt';
 import logger from '../utilities/logger.js';
-import {User} from '../models/userSchema.js';
+import { User } from '../models/userSchema.js';
 import ApiError from '../utilities/apiError.js';
 import jwt from 'jsonwebtoken';
 
@@ -107,15 +107,18 @@ const loginWithOtp = async (email) => {
 
   let isNewUser = false;
 
+  
+
   if (!user) {
     user = await User.create({ email });
-    const token = jwt.sign({
-        id: user._id,
-        email: user.email
-    }, process.env.JWT_SECRET_KEY, {expiresIn: '1d'});
     isNewUser = true;
   }
 
+  const token = jwt.sign({
+        id: user._id,
+        email: user.email
+    }, process.env.JWT_SECRET_KEY, {expiresIn: '1d'});
+   
   return {
         user:{
         id: user._id,

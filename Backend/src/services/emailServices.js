@@ -34,14 +34,21 @@ export const sendOtpEmail = async (email, otp) => {
   });
 };
 
-export const sendWelcomEmail = async(email,name) =>{
-    let template = loadTemplate("welcom.html");
+export const sendWelcomEmail = async(email) =>{
 
-    template = template.replace("{{name}}", name);
+    let template = loadTemplate("welcom.html");
 
     await transporter.sendMail({
         to: email,
         subject: "Welcome to Blue Ledger",
-        html: template
+        html: template,
+        attachments: [
+          {
+            filename: "logo.png",
+            path: path.join(__dirname, "../templates/logo.png"),
+            cid: "logo"
+          }
+        ]
+        
     });
 }
