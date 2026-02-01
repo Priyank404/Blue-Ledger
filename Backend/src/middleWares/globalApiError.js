@@ -1,4 +1,8 @@
 const globalErrorHandler = (err, req, res, next) => {
+  // Guard: prevent handler from throwing if next() was called with no/weird arg (would kill process)
+  if (!err || typeof err !== "object") {
+    err = { statusCode: 500, message: err && String(err) || "Unknown error" };
+  }
   const statusCode = err.statusCode || err.status || 500;
 
   // Known (operational) errors

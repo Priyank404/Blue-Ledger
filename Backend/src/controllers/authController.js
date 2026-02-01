@@ -2,7 +2,8 @@ import logger from "../utilities/logger.js"
 import authServices from '../services/authServices.js';
 import ApiResponse from "../utilities/apiResponse.js";
 import { otpVerify } from "../services/otpServices.js";
-import {sendWelcomEmail} from "../services/emailServices.js"
+import {sendWelcomEmail} from "../services/emailServices.js";
+import { verifyGoogleToken } from "../services/googleAuthServices.js";
 
 
 export const signUp = async (req, res, next) =>{
@@ -137,6 +138,36 @@ export const verifyOtpLogin = async (req, res, next) => {
 
   } catch (error) {
     logger.error("OTP login failed", { error });
+    next(error);
+  }
+};
+
+
+export const googleLogin = async (req, res, next) => {
+  try {
+
+    const { token } = req.body; // token from frontend
+    logger.info("Token received",{ token })
+    const googleUser = await verifyGoogleToken(token);
+
+    logger.info("Token verified successfully")
+    const result = await authServices.loginWithGoogle(googleUser);
+
+    logger.info("login with Google successfully ")
+    if (result.isNewUser) {
+      await sendWelcomEmail(result.user.email);
+    }
+
+    res.cookie("token", result.token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
+    return res.json(result.user);
+
+  } catch (error) {
     next(error);
   }
 };

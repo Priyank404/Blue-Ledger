@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import { validateSignIn } from '../validators/validateSignIn.js';
 import { validateLogIn } from '../validators/validateLogin.js';
-import { signUp, logIn, logOut } from '../controllers/authController.js';
+import { signUp, logIn, logOut, googleLogin } from '../controllers/authController.js';
 import { verifyJWT } from '../middleWares/verifyJWT.js';
 import { getMe } from '../controllers/authController.js';
 import { verifyOtpLogin } from "../controllers/authController.js";
@@ -23,5 +23,6 @@ router.post("/otp/send", sendOtp)
 
 router.post("/otp/verify", verifyOtpLogin);
 
+router.post("/google/login",googleLogin)
 
 export default router;

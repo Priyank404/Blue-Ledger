@@ -110,7 +110,11 @@ const loginWithOtp = async (email) => {
   
 
   if (!user) {
-    user = await User.create({ email });
+    user = await User.create({ 
+        email,
+        authProvider:"email_otp",
+        isVerified:true
+    });
     isNewUser = true;
   }
 
@@ -129,11 +133,40 @@ const loginWithOtp = async (email) => {
     };
 };
 
+const loginWithGoogle = async (googleUser) => {
+
+  const { email, sub } = googleUser;
+
+  let user = await User.findOne({ email });
+
+  let isNewUser = false;
+
+  if (!user) {
+    user = await User.create({
+      email,
+      googleId: sub,
+      authProvider: "google",
+      isVerified: true
+    });
+    isNewUser = true;
+  }
+
+  const token = jwt.sign(
+    { id: user._id, email: user.email },
+    process.env.JWT_SECRET_KEY,
+    { expiresIn: "1d" }
+  );
+
+  return { user, token, isNewUser };
+};
+
+
 const authServices = {
   registerUser,
   logInUser,
   getUserById,
-  loginWithOtp
+  loginWithOtp,
+  loginWithGoogle
 };
 
 export default authServices;

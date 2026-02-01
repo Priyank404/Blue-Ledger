@@ -16,6 +16,7 @@ import { createStockSnapshots } from './services/stockSnapShotServices.js';
 
 
 
+
 const app = express();
 app.use(cors({
   origin: ["http://localhost:5173", "https://blue-legder.vercel.app"],
@@ -43,8 +44,8 @@ app.use('/api/export', exportRoutes)
 app.use('/api/dashboard', dashboardRoutes)
 
 
-app.use(globalErrorHandler)
-startStockSnapshotCron()
-createStockSnapshots();
+app.use(globalErrorHandler);
+startStockSnapshotCron();
+createStockSnapshots().catch(() => {});
 
 export default app;

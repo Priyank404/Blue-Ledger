@@ -9,6 +9,22 @@ const userSchema = new mongoose.Schema({
         trim: true 
    },
 
+   authProvider:{
+     type: String,
+     enum:["google", "email_otp"],
+     required: true
+   },
+
+   googleId:{
+     type:String,
+     default: null
+   },
+
+   isVerified:{
+     type: Boolean,
+     default:true
+   },
+
    password: {
         type: String,
    },
