@@ -8,7 +8,16 @@ import logger from "../utilities/logger.js";
 export const getDashboardData = async ({userId}) =>{
     try {
 
-        const portfolio = await Portfolio.findOne({user:userId});
+        const portfolio = await Portfolio.findOne({user: userId});
+
+        if (!portfolio) {
+        return {
+            totalValue: 0,
+            totalProfit: 0,
+            portfolioHistory: [],
+            recentTransaction: []
+        };
+        }
         const cachedKey = `dashboard:${userId}`
         
         const cachedData = await cacheGet(cachedKey);

@@ -147,7 +147,7 @@ export const googleLogin = async (req, res, next) => {
   try {
 
     const { token } = req.body; // token from frontend
-    logger.info("Token received",{ token })
+    logger.info("Token received")
     const googleUser = await verifyGoogleToken(token);
 
     logger.info("Token verified successfully")

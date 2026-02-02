@@ -138,8 +138,14 @@ export const getTransactions = async ({ userId }) => {
   const portfolio = await Portfolio.findOne({ user: userId });
   
 
+  if (!portfolio) {
+    return [];
+  }
+
   const transactions = await Transaction.find({ Portfolio: portfolio._id });
-  
+
+  // always return array (empty or filled)
+  return transactions || [];
 
   return transactions;
 };

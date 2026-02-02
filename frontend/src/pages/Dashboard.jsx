@@ -129,17 +129,22 @@ const Dashboard = () => {
   }
 
   const {
-    totalInvestment,
-    currentTotalValue,
-    totalPnl,
-    numberOfStocks,
-    portfolioHistory,
-    recentTransaction,
-    profitContribution,
-    lossContribution
-  } = dashboardData
+  totalInvestment = 0,
+  currentTotalValue = 0,
+  totalPnl = 0,
+  numberOfStocks = 0,
+  portfolioHistory = [],
+  recentTransaction = [],
+  profitContribution = [],
+  lossContribution = []
+} = dashboardData || {}
 
-  console.log(dashboardData)
+
+const NoData = () => (
+    <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
+      No Data Available
+    </div>
+  );
 
   /* ================= UI ================= */
   return (
@@ -187,7 +192,7 @@ const Dashboard = () => {
             Overall Portfolio Graph
           </h2>
 
-          {portfolioHistory ?  (
+          {portfolioHistory.length > 0 ?  (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={portfolioHistory}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -221,9 +226,7 @@ const Dashboard = () => {
               </LineChart>
             </ResponsiveContainer>
           ):(
-            <p className="text-gray-500 dark:text-gray-400">
-              No portfolio history yet
-            </p>
+          <NoData/>
           ) }
         </div>
 

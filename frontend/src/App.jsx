@@ -1,6 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom'
 import Login from './pages/Login'
-import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
 import Transactions from './pages/Transactions'
 import Portfolio from './pages/Portfolio'
@@ -38,7 +37,6 @@ function AppRoutes() {
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
 
       <Route
         path="/dashboard"

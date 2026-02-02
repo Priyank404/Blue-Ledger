@@ -33,24 +33,25 @@ const Portfolio = () => {
   const { dashboardData, loading} = useDashboard();
   console.log(dashboardData);
 
-  const {
-      totalInvestment,
-      currentTotalValue,
-      totalPnl,
-      numberOfStocks,
-      portfolioHistory,
-      recentTransaction,
-      profitContribution,
-      lossContribution,
-      sectorAllocation,
-      sectorProfit,
-      holdingStatus,
-      pnlDistribution,
-      topPerformerStock,
-      topLosserStock,
-      valueAllocation,
-      overallRoi
-    } = dashboardData
+ const {
+  totalInvestment = 0,
+  currentTotalValue = 0,
+  totalPnl = 0,
+  numberOfStocks = 0,
+  portfolioHistory = [],
+  recentTransaction = [],
+  profitContribution = [],
+  lossContribution = [],
+  sectorAllocation = [],
+  sectorProfit = [],
+  holdingStatus = { profit: 0, loss: 0, neutral: 0 },
+  pnlDistribution = [],
+  topPerformerStock = [],
+  topLosserStock = [],
+  valueAllocation = [],
+  overallRoi = 0
+} = dashboardData || {};
+
 
   const [searchStock, setSearchStock] = useState('')
   const [minQty, setMinQty] = useState('')
@@ -61,7 +62,6 @@ const Portfolio = () => {
   const [maxPnl, setMaxPnl] = useState('')
   const [pnlFilter, setPnlFilter] = useState('') // 'profit', 'loss', or ''
   const [showFilters, setShowFilters] = useState(false)
-
 
 
 
@@ -93,7 +93,7 @@ const Portfolio = () => {
   
 
   // Filter stock holdings
-  const filteredHoldings = dashboardData.holdings.filter((holding) => {
+  const filteredHoldings = holdings.filter((holding) => {
     const matchesSearch = holding.symbol.toLowerCase().includes(searchStock.toLowerCase())
     const matchesQty = (!minQty || holding.Quantity >= parseFloat(minQty)) &&
                       (!maxQty || holding.Quantity <= parseFloat(maxQty))
@@ -121,8 +121,12 @@ const Portfolio = () => {
   const valueChange = currentTotalValue - totalInvestment;
 
   
+  const NoData = () => (
+    <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
+      No Data Available
+    </div>
+  );
 
-  
 
    
 
@@ -174,7 +178,8 @@ const Portfolio = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Sector-wise Distribution</h2>
-            <ResponsiveContainer width="100%" height={300}>
+            {sectorAllocation.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
                   data={sectorAllocation}
@@ -204,13 +209,17 @@ const Portfolio = () => {
                 />
               </PieChart>
             </ResponsiveContainer>
+            ):(
+              <NoData />
+            )}
+            
           </div>
 
 
         {/* Sector Wise Profit/Loss */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Sector Wise Profit/Loss</h2>
-           <ResponsiveContainer width="100%" height={320}>
+            {sectorProfit.length > 0  ? (<ResponsiveContainer width="100%" height={320}>
               <BarChart
                 data={sectorProfit}
                 margin={{ top: 20, right: 20, left: 10, bottom: 70 }}
@@ -260,7 +269,10 @@ const Portfolio = () => {
                   ))}
                 </Bar>
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer>) : (
+              <NoData/>
+            )}
+           
 
           </div>
         </div>
@@ -268,7 +280,7 @@ const Portfolio = () => {
         {/* Portfolio Growth Graph */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Portfolio Growth Over Time</h2>
-          <ResponsiveContainer width="100%" height={400}>
+          {portfolioHistory.length > 0 ? (<ResponsiveContainer width="100%" height={400}>
             <AreaChart data={portfolioHistory}>
               <defs>
                 <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
@@ -301,7 +313,10 @@ const Portfolio = () => {
                 name="Portfolio Value"
               />
             </AreaChart>
-          </ResponsiveContainer>
+          </ResponsiveContainer>) : (
+            <NoData/>
+          )}
+          
         </div>
 
         {/* Charts Section */}
@@ -309,6 +324,7 @@ const Portfolio = () => {
           {/* Asset Allocation */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold mb-4">Holdings Status</h2>
+            
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -337,7 +353,7 @@ const Portfolio = () => {
           {/* P&L Distribution */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Profit/Loss by Stock</h2>
-            <ResponsiveContainer width="100%" height={300}>
+           { pnlDistribution.length > 0 ? (<ResponsiveContainer width="100%" height={300}>
               <BarChart data={pnlDistribution}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
@@ -364,7 +380,10 @@ const Portfolio = () => {
                   ))}
                 </Bar>
               </BarChart>
-            </ResponsiveContainer>
+            </ResponsiveContainer>) : (
+              <NoData/>
+            )}
+            
           </div>
         </div>
 
@@ -454,7 +473,8 @@ const Portfolio = () => {
         {/* Value Allocation */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Value Allocation by Stock</h2>
-          <ResponsiveContainer width="100%" height={300}>
+          {valueAllocation.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
             <BarChart data={valueAllocation} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis type="number" />
@@ -465,7 +485,10 @@ const Portfolio = () => {
               <Legend />
               <Bar dataKey="value" fill="#3b82f6" radius={[0, 8, 8, 0]} />
             </BarChart>
-          </ResponsiveContainer>
+          </ResponsiveContainer>) : (
+            <NoData/>
+          )}
+          
           <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
             {valueAllocation.slice(0, 4).map((item) => (
 
