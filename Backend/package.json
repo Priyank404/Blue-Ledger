@@ -13,6 +13,7 @@
     "dayjs": "^1.11.19",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.2.1",
     "google-auth-library": "^10.5.0",
     "ioredis": "^5.9.1",
     "joi": "^18.0.1",

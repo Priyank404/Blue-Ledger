@@ -7,22 +7,19 @@ import { verifyJWT } from '../middleWares/verifyJWT.js';
 import { getMe } from '../controllers/authController.js';
 import { verifyOtpLogin } from "../controllers/authController.js";
 import { sendOtp } from '../controllers/otpController.js';
+import { loginLimiter, otpLimiter } from '../middleWares/rateLimiter.js';
 
 const router = Router();
 
 router.get('/me', verifyJWT, getMe);
 
-router.post('/signup', validateSignIn, signUp);
-
-router.post('/login', validateLogIn, logIn);
-
 router.post('/logout', logOut)
 
 
-router.post("/otp/send", sendOtp)
+router.post("/otp/send",otpLimiter, sendOtp)
 
-router.post("/otp/verify", verifyOtpLogin);
+router.post("/otp/verify",loginLimiter, verifyOtpLogin);
 
-router.post("/google/login",googleLogin)
+router.post("/google/login",loginLimiter, googleLogin)
 
 export default router;

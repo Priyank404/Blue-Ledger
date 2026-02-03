@@ -4,7 +4,7 @@ import Dashboard from './pages/Dashboard'
 import Transactions from './pages/Transactions'
 import Portfolio from './pages/Portfolio'
 import PortfolioDetails from './pages/PortfolioDetails'
-import Settings from './pages/Settings'
+// import Settings from './pages/Settings'
 import ExportData from './pages/ExportData'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { NotificationProvider } from './context/NotificationContext'
@@ -70,14 +70,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
+      {/* <Route
         path="/settings"
         element={
           <ProtectedRoute>
             <Settings />
           </ProtectedRoute>
         }
-      />
+      /> */}
       <Route
         path="/export"
         element={

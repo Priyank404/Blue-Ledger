@@ -36,7 +36,7 @@ const Sidebar = () => {
     { path: '/portfolio', label: 'Portfolio', icon: '📊' },
     { path: '/transactions', label: 'Transactions', icon: '💼' },
     { path: '/export', label: 'Export Data', icon: '📥' },
-    { path: '/settings', label: 'Settings', icon: '⚙️' },
+    // { path: '/settings', label: 'Settings', icon: '⚙️' },
   ]
 
   const isActive = (path) => location.pathname === path

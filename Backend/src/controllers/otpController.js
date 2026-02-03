@@ -15,7 +15,10 @@ export const sendOtp = async(req, res, next)=>{
         logger.info("OTP generationg successful", {email})
         return res.status(200).json(new ApiResponse(200, otp, "success"));
     } catch (error) {
-        logger.error("Error while generating OTP", {error});
+         logger.error("Error while generating OTP", {
+            message: error.message,
+            stack: error.stack
+        });
         next(error);
     }
 }
@@ -32,6 +35,10 @@ export const verifyOtp = async(req, res, next)=>{
 
         return res.status(200).json(new ApiResponse(200, null, "success"));
     } catch (error) {
-        
+         logger.error("Error while generating OTP", {
+        message: error.message,
+        stack: error.stack
+    });
+    next(error)
     }
 }
