@@ -19,7 +19,10 @@ export const addTransaction = async (req, res, next) => {
             new ApiResponse(200, result, "success")
         )
     } catch (error) {
-        logger.error("Error while creating transaction", {error});
+        logger.error("Error while generating OTP", {
+                    message: error.message,
+                    stack: error.stack
+                });
         next(error);
     }
 }
@@ -37,7 +40,10 @@ export const getTransactions = async (req, res, next) =>{
             new ApiResponse(200, result, "success")
         )
     } catch (error) {
-        logger.error("Error while getting transactions", {error});
+        logger.error("Error while generating OTP", {
+                    message: error.message,
+                    stack: error.stack
+                });
         next(error);
     }
 }
@@ -55,7 +61,10 @@ export const deleteTransaction = async (req, res, next) =>{
             new ApiResponse(200, result, "success")
         )
     } catch (error) {
-        logger.error("Error while deleting transaction", {error});
+        logger.error("Error while generating OTP", {
+                    message: error.message,
+                    stack: error.stack
+                });
         next(error)
     }
 }

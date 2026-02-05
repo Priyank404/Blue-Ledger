@@ -46,13 +46,15 @@ export const createTransaction = async ({ userId, type, name, quantity, price, d
       await updateHoldingSell({ portfolioId: portfolio._id, name, quantity, price, date, session });
     }
 
+    await createPortfolioSnapshot({ 
+      portfolioId: portfolio._id,
+      session 
+    });
     await session.commitTransaction();
     session.endSession();
 
-    createPortfolioSnapshot({ portfolioId: portfolio._id });
-
-    await cahceDelPattern(`dashboard:${userId}:*`);
-    await cahceDelPattern(`portfolio:${userId}:*`);
+    await cacheDelPattern(`dashboard:${userId}:*`);
+    await cacheDelPattern(`portfolio:${userId}:*`);
     logger.info("User cached invalidated after transactions", {userId});
 
     return createdTx;
@@ -146,8 +148,6 @@ export const getTransactions = async ({ userId }) => {
 
   // always return array (empty or filled)
   return transactions || [];
-
-  return transactions;
 };
 
 /* ---------------------------
