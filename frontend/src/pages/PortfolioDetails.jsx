@@ -24,10 +24,8 @@ const PortfolioDetails = () => {
       try {
         setloading(true);
         const data = await getSingleStokData(id);
-        console.log(data);
         setstockData(data);
       } catch (err) {
-        console.log("Error fetching stock details", err);
         setstockData(null);
       } finally {
         setloading(false);

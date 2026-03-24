@@ -31,7 +31,6 @@ const Portfolio = () => {
   
 
   const { dashboardData, loading} = useDashboard();
-  console.log(dashboardData);
 
  const {
   totalInvestment = 0,
