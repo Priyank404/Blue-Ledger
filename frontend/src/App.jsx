@@ -18,7 +18,7 @@ const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 text-gray-900 dark:text-white">Loading authentication...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 text-gray-900 dark:text-white">Checking session...</div>;
   }
 
   if (!user) {
@@ -28,10 +28,6 @@ const ProtectedRoute = ({ children }) => {
 };
 function AppRoutes() {
   const { user, loading } = useAuth();
-
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900 text-gray-900 dark:text-white">Loading...</div>; // 🔒 BLOCK EVERYTHING
-  }
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />

@@ -31,9 +31,6 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  if (loading) {
-    return <div>Loading authentication...</div>; // 🔒 critical gate
-  }
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
