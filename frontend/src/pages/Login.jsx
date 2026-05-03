@@ -14,7 +14,7 @@ const Login = () => {
   const [sendingOtp, setSendingOtp] = useState(false)
   const [googleReady, setGoogleReady] = useState(false)
   const googleButtonRef = useRef(null)
-  const { user, login } = useAuth()
+  const { user, login, loading: authLoading } = useAuth()
   const { showNotification } = useNotification()
 
   useEffect(() => {
@@ -101,6 +101,10 @@ const Login = () => {
   const backToEmail = () => {
     setStep('email')
     setOtp('')
+  }
+
+  if (authLoading) {
+    return <div>Checking auth...</div>;
   }
 
   if (user) {
