@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { getTransactions } from "../APIs/transaction";
 
 const TransactionContext = createContext();
@@ -6,16 +6,20 @@ const TransactionContext = createContext();
 export const TransactionProvider = ({ children }) => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 8,
+    total: 0,
+    totalPages: 0,
+  });
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async (page = 1, limit = 8) => {
     try {
       setLoading(true);
-      const data = await getTransactions();
-      if(data.length === 0){
-         setLoading(true);
-      }
+      const data = await getTransactions({ page, limit });
+      const transactionData = Array.isArray(data) ? data : data.transactions || [];
 
-      const structedData = data.map((t =>({
+      const structedData = transactionData.map((t =>({
         id: t._id,
         date: t.date,
         name: t.symbol,
@@ -26,23 +30,30 @@ export const TransactionProvider = ({ children }) => {
       })))
 
       setTransactions(structedData);
+      setPagination(
+        Array.isArray(data)
+          ? { page, limit, total: structedData.length, totalPages: Math.ceil(structedData.length / limit) }
+          : data.pagination
+      );
     } catch (err) {
       console.error("Error fetching transactions", err);
       setTransactions([]);
+      setPagination({ page, limit, total: 0, totalPages: 0 });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchTransactions();
-  }, []);
+  }, [fetchTransactions]);
 
   return (
     <TransactionContext.Provider
       value={{
         transactions,
         loading,
+        pagination,
         refreshTransactions: fetchTransactions,
       }}
     >

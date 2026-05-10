@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import StatCard from '../components/StatCard'
 import TransactionsTable from '../components/TransactionsTable'
@@ -17,6 +17,7 @@ import {
 } from 'recharts'
 import { useChart } from '../context/ChartContext'
 import { useHoldings } from '../context/HoldingsContext'
+import { HISTORY_RANGES, buildPortfolioHistory, formatHistoryLabel } from '../utilities/portfolioHistory'
 
 const COLORS = [
   '#3b82f6',
@@ -47,6 +48,7 @@ const getStatusColor = (pnl) => {
 
 
 const Dashboard = () => {
+  const [historyRange, setHistoryRange] = useState('daily')
   /* ================= CONTEXTS ================= */
   const { dashboardData, loading} = useDashboard();
 
@@ -117,17 +119,6 @@ const Dashboard = () => {
   );
 };
 
-
-
-  /* ================= LOADING ================= */
-   if (loading) {
-    return (
-      <DashboardLayout>
-        <p className="text-gray-900 dark:text-white">Loading dashboard...</p>
-      </DashboardLayout>
-    )
-  }
-
   const {
   totalInvestment = 0,
   currentTotalValue = 0,
@@ -145,6 +136,20 @@ const NoData = () => (
       No Data Available
     </div>
   );
+
+  const chartPortfolioHistory = useMemo(
+    () => buildPortfolioHistory(portfolioHistory, historyRange),
+    [portfolioHistory, historyRange]
+  );
+
+  /* ================= LOADING ================= */
+   if (loading) {
+    return (
+      <DashboardLayout>
+        <p className="text-gray-900 dark:text-white">Loading dashboard...</p>
+      </DashboardLayout>
+    )
+  }
 
   /* ================= UI ================= */
   return (
@@ -188,22 +193,35 @@ const NoData = () => (
 
         {/* Overall Portfolio Graph */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Overall Portfolio Graph
-          </h2>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Overall Portfolio Graph
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {HISTORY_RANGES.map((range) => (
+                <button
+                  key={range.key}
+                  type="button"
+                  onClick={() => setHistoryRange(range.key)}
+                  className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+                    historyRange === range.key
+                      ? 'bg-primary-600 text-white'
+                      : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          {portfolioHistory.length > 0 ?  (
+          {chartPortfolioHistory.length > 0 ?  (
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={portfolioHistory}>
+              <LineChart data={chartPortfolioHistory}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="day"
-                  tickFormatter={(value) =>
-                    new Date(value).toLocaleDateString('en-IN', {
-                      month: 'short',
-                      day: 'numeric'
-                    })
-                  }
+                  tickFormatter={(value) => formatHistoryLabel(value, historyRange)}
                 />
                 <YAxis
                   tickFormatter={(value) =>
@@ -212,9 +230,7 @@ const NoData = () => (
                 />
                 <Tooltip
                   formatter={(value) => formatCurrency(value)}
-                  labelFormatter={(label) =>
-                    new Date(label).toLocaleDateString()
-                  }
+                  labelFormatter={(label) => formatHistoryLabel(label, historyRange)}
                 />
                 <Line
                   type="monotone"

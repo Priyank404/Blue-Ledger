@@ -9,3 +9,10 @@ export const getPrice = async (symbols) => {
         console.log(error);
     }
 };
+
+export const resolveStock = async (query) => {
+    const response = await api.get('/api/stock/resolve', {
+        params: { query }
+    });
+    return response.data.data;
+};

@@ -6,6 +6,7 @@ import { getStockHistory } from "../services/stockSnapShotServices.js";
 import { BulkPrice } from "../services/stockDataServices.js";
 import { getLivePriceCached, getSingleLivePriceCached } from "../services/stockPriceCacheServices.js";
 import { getStockDetailsService } from "../services/SingleStockDetails.js";
+import { resolveNseStock } from "../services/stockDataServices.js";
 
 export const getPrice = async (req, res, next)=>{
     const symbol = req.params.symbol;
@@ -129,6 +130,19 @@ export const getStockDetails = async (req, res, next) => {
 
     return res.status(200).json(
       new ApiResponse(200, stockData, "Stock details fetched successfully")
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const resolveStock = async (req, res, next) => {
+  try {
+    const { query } = req.query;
+    const stock = await resolveNseStock(query);
+
+    return res.status(200).json(
+      new ApiResponse(200, stock, "Stock found")
     );
   } catch (error) {
     next(error);

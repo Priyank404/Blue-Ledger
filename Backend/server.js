@@ -12,6 +12,7 @@ connectDB()
       app.listen(PORT, () => {
         logger.info(`Server running on port ${PORT}`);
       });
+      startPortfolioSnapshotCron();
     } catch (error) {
       logger.error("Error starting node server", { error });
     }

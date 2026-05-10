@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { getPortfolioValueHistory } from "../APIs/ChartApi";
 import { getPortfolioData } from "../APIs/holdings";
 
 const ChartContext = createContext(null);
@@ -9,25 +8,24 @@ export const ChartProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-
   const normalizePortfolioHistory = (data) => {
-  const map = new Map();
+    const map = new Map();
 
-  data.forEach(item => {
-    const day = new Date(item.date).toISOString().split("T")[0];
+    data.forEach((item) => {
+      const rawDate = item.day || item.date;
+      const day = rawDate ? new Date(rawDate).toISOString().split("T")[0] : null;
+      if (!day) return;
 
-    // overwrite → keeps LAST value of the day
-    map.set(day, {
-      date: day,
-      value: item.value
+      map.set(day, {
+        day,
+        value: item.value,
+      });
     });
-  });
 
-  return Array.from(map.values()).sort(
-    (a, b) => new Date(a.date) - new Date(b.date)
-  );
-};
-
+    return Array.from(map.values()).sort(
+      (a, b) => new Date(a.day) - new Date(b.day)
+    );
+  };
 
   const fetchPortfolioHistory = async () => {
     try {
@@ -35,9 +33,6 @@ export const ChartProvider = ({ children }) => {
       setError(null);
 
       const response = await getPortfolioData();
-
-
-
 
       setPortfolioHistory(normalizePortfolioHistory(response.portfolioHistory || []));
     } catch (err) {
@@ -59,7 +54,7 @@ export const ChartProvider = ({ children }) => {
         portfolioHistory,
         loading,
         error,
-        refreshPortfolioHistory: fetchPortfolioHistory
+        refreshPortfolioHistory: fetchPortfolioHistory,
       }}
     >
       {children}

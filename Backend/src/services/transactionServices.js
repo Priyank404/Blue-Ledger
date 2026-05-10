@@ -6,6 +6,7 @@ import mongoose from "mongoose";
 import { Holdings } from "../models/holdingSchema.js";
 import { createPortfolioSnapshot } from "./portfolioSnapShotServices.js";
 import ApiError from "../utilities/apiError.js";
+import { resolveNseStock } from "./stockDataServices.js";
 
 /**
  * Create a transaction (BUY/SELL) and update holdings accordingly.
@@ -22,6 +23,8 @@ export const createTransaction = async ({ userId, type, name, quantity, price, d
   }
 
   const portfolio = await getOrCreatePortfolio(userId);
+  const stock = await resolveNseStock(name);
+  const symbol = stock.symbol;
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -33,7 +36,7 @@ export const createTransaction = async ({ userId, type, name, quantity, price, d
     const [createdTx] = await Transaction.create([{
       Portfolio: portfolio._id,
       transactionType: type,
-      symbol: name,
+      symbol,
       quantity,
       pricePerUnit: price,
       date
@@ -41,9 +44,9 @@ export const createTransaction = async ({ userId, type, name, quantity, price, d
 
     // call update functions (they use session via closure)
     if (type === "BUY") {
-      await updateHoldingBuy({ portfolioId: portfolio._id, name, quantity, price, date, session });
+      await updateHoldingBuy({ portfolioId: portfolio._id, name: symbol, quantity, price, date, session });
     } else {
-      await updateHoldingSell({ portfolioId: portfolio._id, name, quantity, price, date, session });
+      await updateHoldingSell({ portfolioId: portfolio._id, name: symbol, quantity, price, date, session });
     }
 
     await createPortfolioSnapshot({ 
@@ -136,18 +139,42 @@ async function updateHoldingSell({ portfolioId, name, quantity, price, date, ses
 /* ---------------------------
    Transactions listing
    --------------------------- */
-export const getTransactions = async ({ userId }) => {
+export const getTransactions = async ({ userId, page = 1, limit = 8 }) => {
+  const currentPage = Math.max(Number(page) || 1, 1);
+  const pageSize = Math.min(Math.max(Number(limit) || 8, 1), 100);
+  const skip = (currentPage - 1) * pageSize;
   const portfolio = await Portfolio.findOne({ user: userId });
   
 
   if (!portfolio) {
-    return [];
+    return {
+      transactions: [],
+      pagination: {
+        page: currentPage,
+        limit: pageSize,
+        total: 0,
+        totalPages: 0
+      }
+    };
   }
 
-  const transactions = await Transaction.find({ Portfolio: portfolio._id });
+  const [transactions, total] = await Promise.all([
+    Transaction.find({ Portfolio: portfolio._id })
+      .sort({ date: -1, _id: -1 })
+      .skip(skip)
+      .limit(pageSize),
+    Transaction.countDocuments({ Portfolio: portfolio._id })
+  ]);
 
-  // always return array (empty or filled)
-  return transactions || [];
+  return {
+    transactions: transactions || [],
+    pagination: {
+      page: currentPage,
+      limit: pageSize,
+      total,
+      totalPages: Math.ceil(total / pageSize)
+    }
+  };
 };
 
 /* ---------------------------
@@ -213,6 +240,60 @@ export const removeTransaction = async ({ userId, transactionId }) => {
     session.endSession();
     throw error;
   }
+};
+
+const validateImportedTransaction = (row) => {
+  if (!["BUY", "SELL"].includes(row.type)) {
+    throw new ApiError(400, "Transaction type must be BUY or SELL.");
+  }
+
+  if (!row.name) {
+    throw new ApiError(400, "Stock name is required.");
+  }
+
+  if (!Number.isInteger(Number(row.quantity)) || Number(row.quantity) < 1) {
+    throw new ApiError(400, "Quantity must be a whole number greater than 0.");
+  }
+
+  if (!Number(row.price) || Number(row.price) < 1) {
+    throw new ApiError(400, "Price must be greater than 0.");
+  }
+
+  if (!/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(row.date || "")) {
+    throw new ApiError(400, "Date must be in YYYY-MM-DD format.");
+  }
+};
+
+export const importTransactions = async ({ userId, transactions = [] }) => {
+  const imported = [];
+  const failed = [];
+
+  for (const [index, row] of transactions.entries()) {
+    try {
+      validateImportedTransaction(row);
+      const created = await createTransaction({
+        userId,
+        type: row.type,
+        name: row.name,
+        quantity: row.quantity,
+        price: row.price,
+        date: row.date
+      });
+      imported.push(created);
+    } catch (error) {
+      failed.push({
+        row: index + 1,
+        name: row.name,
+        message: error.message || "Failed to import transaction"
+      });
+    }
+  }
+
+  return {
+    importedCount: imported.length,
+    failedCount: failed.length,
+    failed
+  };
 };
 
 /* ---------------------------
@@ -289,7 +370,8 @@ async function reverseBuy({ portfolioId, name, transactionId, session }) {
 const transaction = {
   createTransaction,
   getTransactions,
-  removeTransaction
+  removeTransaction,
+  importTransactions
 };
 
 export default transaction;

@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts'
 import { useHoldings } from "../context/HoldingsContext";
 import { useDashboard } from "../context/DashboardContext";
 import { useChart } from '../context/ChartContext'
+import { HISTORY_RANGES, buildPortfolioHistory, formatHistoryLabel } from '../utilities/portfolioHistory'
 
 
 //color for pie chart
@@ -61,24 +62,12 @@ const Portfolio = () => {
   const [maxPnl, setMaxPnl] = useState('')
   const [pnlFilter, setPnlFilter] = useState('') // 'profit', 'loss', or ''
   const [showFilters, setShowFilters] = useState(false)
+  const [holdingsPage, setHoldingsPage] = useState(1)
+  const [historyRange, setHistoryRange] = useState('daily')
+  const holdingsPageSize = 8
 
 
 
- const isPortfolioLoading = loading || holdingsLoading ;
-
- if (isPortfolioLoading) {
-    return (
-      <DashboardLayout>
-        <p className="text-gray-900 dark:text-white">Loading portfolio...</p>
-      </DashboardLayout>
-    );
-  }
-
-  
-
-
-  // Filter states for Stock Holdings table
-  
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -105,6 +94,37 @@ const Portfolio = () => {
                           (pnlFilter === 'loss' && holding.pnl < 0)
     return matchesSearch && matchesQty && matchesPrice && matchesPnl && matchesPnlType
   })
+
+  useEffect(() => {
+    setHoldingsPage(1)
+  }, [searchStock, minQty, maxQty, minPrice, maxPrice, minPnl, maxPnl, pnlFilter])
+
+  const holdingsTotalPages = Math.ceil(filteredHoldings.length / holdingsPageSize)
+  const holdingsStartIndex = (holdingsPage - 1) * holdingsPageSize
+  const paginatedHoldings = filteredHoldings.slice(
+    holdingsStartIndex,
+    holdingsStartIndex + holdingsPageSize
+  )
+  const holdingPageNumbers = Array.from({ length: holdingsTotalPages }, (_, index) => index + 1)
+  const chartPortfolioHistory = useMemo(
+    () => buildPortfolioHistory(portfolioHistory, historyRange),
+    [portfolioHistory, historyRange]
+  )
+
+  const handleHoldingsPageChange = (page) => {
+    if (page === holdingsPage || page < 1 || page > holdingsTotalPages) return
+    setHoldingsPage(page)
+  }
+
+ const isPortfolioLoading = loading || holdingsLoading ;
+
+ if (isPortfolioLoading) {
+    return (
+      <DashboardLayout>
+        <p className="text-gray-900 dark:text-white">Loading portfolio...</p>
+      </DashboardLayout>
+    );
+  }
 
   const clearFilters = () => {
     setSearchStock('')
@@ -278,9 +298,27 @@ const Portfolio = () => {
 
         {/* Portfolio Growth Graph */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Portfolio Growth Over Time</h2>
-          {portfolioHistory.length > 0 ? (<ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={portfolioHistory}>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Portfolio Growth Over Time</h2>
+            <div className="flex flex-wrap gap-2">
+              {HISTORY_RANGES.map((range) => (
+                <button
+                  key={range.key}
+                  type="button"
+                  onClick={() => setHistoryRange(range.key)}
+                  className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+                    historyRange === range.key
+                      ? 'bg-primary-600 text-white'
+                      : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {chartPortfolioHistory.length > 0 ? (<ResponsiveContainer width="100%" height={400}>
+            <AreaChart data={chartPortfolioHistory}>
               <defs>
                 <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -291,7 +329,7 @@ const Portfolio = () => {
               <XAxis
                 dataKey="day"
                 tick={{ fontSize: 12 }}
-                tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                tickFormatter={(value) => formatHistoryLabel(value, historyRange)}
               />
               <YAxis
                 tick={{ fontSize: 12 }}
@@ -299,7 +337,7 @@ const Portfolio = () => {
               />
               <Tooltip
                 formatter={(value) => formatCurrency(value)}
-                labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                labelFormatter={(label) => formatHistoryLabel(label, historyRange)}
               />
               <Legend />
               <Area
@@ -629,8 +667,8 @@ const Portfolio = () => {
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredHoldings.length > 0 ? (
-                  filteredHoldings.map((holding) => (
+                {paginatedHoldings.length > 0 ? (
+                  paginatedHoldings.map((holding) => (
                   <tr key={holding.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Link
@@ -674,6 +712,46 @@ const Portfolio = () => {
               </tbody>
             </table>
           </div>
+
+          {holdingsTotalPages > 1 && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Showing page {holdingsPage} of {holdingsTotalPages} ({filteredHoldings.length} holdings)
+              </p>
+              <div className="flex items-center gap-2 overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => handleHoldingsPageChange(holdingsPage - 1)}
+                  disabled={holdingsPage === 1}
+                  className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Prev
+                </button>
+                {holdingPageNumbers.map((page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => handleHoldingsPageChange(page)}
+                    className={`min-w-10 px-3 py-2 text-sm rounded-lg font-medium transition-colors ${
+                      page === holdingsPage
+                        ? 'bg-primary-600 text-white'
+                        : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => handleHoldingsPageChange(holdingsPage + 1)}
+                  disabled={holdingsPage === holdingsTotalPages}
+                  className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>
