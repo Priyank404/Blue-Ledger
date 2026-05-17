@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useNotification } from '../context/NotificationContext'
@@ -18,57 +18,7 @@ const Login = () => {
   const { user, login, loading: authLoading } = useAuth()
   const { showNotification } = useNotification()
 
-  useEffect(() => {
-    if (!GOOGLE_CLIENT_ID) {
-      setGoogleError('Google client id is missing.')
-      return
-    }
-
-    const init = () => {
-      if (window.google?.accounts?.id) {
-        try {
-          window.google.accounts.id.initialize({
-            client_id: GOOGLE_CLIENT_ID,
-            callback: handleGoogleCredential,
-            auto_select: false,
-          })
-          if (googleButtonRef.current) {
-            window.google.accounts.id.renderButton(googleButtonRef.current, {
-              type: 'standard',
-              size: 'large',
-              text: 'continue_with',
-              width: 320,
-            })
-            setGoogleReady(true)
-            setGoogleError('')
-          }
-        } catch (e) {
-          console.warn('Google Sign-In init:', e)
-          setGoogleError('Google sign-in could not load.')
-        }
-        return true
-      }
-      return false
-    }
-    if (init()) return
-    let timeout
-    const id = setInterval(() => {
-      if (init()) {
-        clearInterval(id)
-        clearTimeout(timeout)
-      }
-    }, 100)
-    timeout = setTimeout(() => {
-      setGoogleError('Google sign-in is still loading or blocked by the browser.')
-    }, 7000)
-
-    return () => {
-      clearInterval(id)
-      clearTimeout(timeout)
-    }
-  }, [])
-
-  const handleGoogleCredential = async (response) => {
+  const handleGoogleCredential = useCallback(async (response) => {
     if (!response?.credential) return
     setLoading(true)
     try {
@@ -81,7 +31,74 @@ const Login = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [login, showNotification])
+
+  useEffect(() => {
+    if (authLoading || user) return
+
+    if (!GOOGLE_CLIENT_ID) {
+      setGoogleReady(false)
+      setGoogleError('Google client id is missing.')
+      return
+    }
+
+    const init = () => {
+      if (!googleButtonRef.current || !window.google?.accounts?.id) {
+        return false
+      }
+
+      try {
+        googleButtonRef.current.innerHTML = ''
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleCredential,
+          auto_select: false,
+        })
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          type: 'standard',
+          size: 'large',
+          text: 'continue_with',
+          width: 320,
+        })
+        setGoogleReady(true)
+        setGoogleError('')
+      } catch (e) {
+        console.warn('Google Sign-In init:', e)
+        setGoogleReady(false)
+        setGoogleError('Google sign-in could not load.')
+      }
+
+      return true
+    }
+
+    if (init()) {
+      return () => {
+        if (googleButtonRef.current) {
+          googleButtonRef.current.innerHTML = ''
+        }
+      }
+    }
+
+    let timeout
+    const id = setInterval(() => {
+      if (init()) {
+        clearInterval(id)
+        clearTimeout(timeout)
+      }
+    }, 100)
+
+    timeout = setTimeout(() => {
+      setGoogleError('Google sign-in is still loading or blocked by the browser.')
+    }, 7000)
+
+    return () => {
+      clearInterval(id)
+      clearTimeout(timeout)
+      if (googleButtonRef.current) {
+        googleButtonRef.current.innerHTML = ''
+      }
+    }
+  }, [authLoading, user, handleGoogleCredential])
 
   const handleSendOtp = async (e) => {
     e.preventDefault()
@@ -122,7 +139,7 @@ const Login = () => {
   }
 
   if (authLoading) {
-    return <div>Checking auth...</div>;
+    return <div>Checking auth...</div>
   }
 
   if (user) {
@@ -139,7 +156,6 @@ const Login = () => {
 
         {step === 'email' ? (
           <>
-            {/* Google login - always visible */}
             <div className="flex flex-col items-center w-full mb-6">
               {GOOGLE_CLIENT_ID ? (
                 <>
@@ -209,7 +225,7 @@ const Login = () => {
                 disabled={sendingOtp}
                 className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {sendingOtp ? 'Sending…' : 'Send OTP'}
+                {sendingOtp ? 'Sending...' : 'Send OTP'}
               </button>
             </form>
           </>
@@ -244,7 +260,7 @@ const Login = () => {
                 disabled={loading || otp.length < 6}
                 className="flex-1 bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {loading ? 'Verifying…' : 'Verify'}
+                {loading ? 'Verifying...' : 'Verify'}
               </button>
             </div>
           </form>
