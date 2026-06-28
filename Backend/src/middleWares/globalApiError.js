@@ -1,12 +1,26 @@
+import logger from "../utilities/logger.js";
+
+/**
+ * Central Express error handling middleware.
+ * Differentiates operational client errors from unhandled system crashes.
+ */
 const globalErrorHandler = (err, req, res, next) => {
-  // Guard: prevent handler from throwing if next() was called with no/weird arg (would kill process)
+  // Safe guard fallback if error is undefined or not an object
   if (!err || typeof err !== "object") {
-    err = { statusCode: 500, message: err && String(err) || "Unknown error" };
+    err = { statusCode: 500, message: (err && String(err)) || "Unknown error" };
   }
+  
   const statusCode = err.statusCode || err.status || 500;
 
-  // Known (operational) errors
+  // Operational Client Errors (4xx)
   if (statusCode < 500) {
+    logger.warn("Operational API Error", {
+      statusCode,
+      message: err.message,
+      path: req.originalUrl,
+      method: req.method,
+    });
+
     return res.status(statusCode).json({
       success: false,
       message: err.message || "Something went wrong",
@@ -14,7 +28,14 @@ const globalErrorHandler = (err, req, res, next) => {
     });
   }
 
-  // Unknown / programming errors
+  // Unhandled system errors (500)
+  logger.error("Internal Server Error Exception", {
+    message: err.message,
+    stack: err.stack,
+    path: req.originalUrl,
+    method: req.method,
+  });
+
   return res.status(500).json({
     success: false,
     message: "Internal server error",

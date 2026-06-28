@@ -1,11 +1,17 @@
-import { useState, useCallback } from 'react'
-import Notification from './Notification'
-import React from 'react'
+import React from 'react';
+import Notification from './Notification';
 
-
-const NotificationContainer = ({ notifications, onRemove }) => {
+/**
+ * Container to mount notifications at the top right of the viewport.
+ * Uses screen reader assertive settings to announce new toasts to screen readers.
+ */
+const NotificationContainer = ({ notifications = [], onRemove }) => {
   return (
-    <div className="fixed bottom-4 right-4 z-50 space-y-2">
+    <div 
+      className="fixed right-4 top-4 z-50 space-y-2" 
+      aria-live="assertive" 
+      aria-relevant="additions"
+    >
       {notifications.map((notification) => (
         <Notification
           key={notification.id}
@@ -15,9 +21,7 @@ const NotificationContainer = ({ notifications, onRemove }) => {
         />
       ))}
     </div>
-  )
-}
+  );
+};
 
-export default NotificationContainer ;
-
-
+export default NotificationContainer;

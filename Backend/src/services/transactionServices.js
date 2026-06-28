@@ -1,5 +1,5 @@
 import logger from "../utilities/logger.js";
-import { cacheDelPattern } from "../configs/redis.js";
+import { cacheDel } from "../configs/redis.js";
 import { Transaction } from "../models/transactionSchema.js";
 import { Portfolio } from "../models/portfolioSchema.js";
 import mongoose from "mongoose";
@@ -7,15 +7,35 @@ import { Holdings } from "../models/holdingSchema.js";
 import { createPortfolioSnapshot } from "./portfolioSnapShotServices.js";
 import ApiError from "../utilities/apiError.js";
 import { resolveNseStock } from "./stockDataServices.js";
+import Joi from "joi";
+
+// Joi schema for batch transaction import validation
+const importedTransactionSchema = Joi.object({
+  type: Joi.string().valid("BUY", "SELL").required().messages({
+    "any.only": "Transaction type must be BUY or SELL."
+  }),
+  name: Joi.string().required().messages({
+    "any.required": "Stock name is required."
+  }),
+  quantity: Joi.number().integer().min(1).required().messages({
+    "number.integer": "Quantity must be a whole number.",
+    "number.min": "Quantity must be greater than 0."
+  }),
+  price: Joi.number().positive().required().messages({
+    "number.positive": "Price must be greater than 0."
+  }),
+  date: Joi.string().pattern(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/).required().messages({
+    "string.pattern.base": "Date must be in YYYY-MM-DD format."
+  })
+});
 
 /**
  * Create a transaction (BUY/SELL) and update holdings accordingly.
  * This function is fully transactional (uses mongoose session).
  */
 export const createTransaction = async ({ userId, type, name, quantity, price, date }) => {
-  // helper to get or create portfolio
   async function getOrCreatePortfolio(userId) {
-    let portfolio = await Portfolio.findOne({ user: userId });
+    let portfolio = await Portfolio.findOne({ user: userId }).lean();
     if (!portfolio) {
       portfolio = await Portfolio.create({ user: userId });
     }
@@ -30,9 +50,8 @@ export const createTransaction = async ({ userId, type, name, quantity, price, d
   session.startTransaction();
 
   try {
-    logger.info("Transaction creation attempted");
+    logger.info("Transaction creation attempted", { userId, symbol });
 
-    // create transaction inside session (array-form)
     const [createdTx] = await Transaction.create([{
       Portfolio: portfolio._id,
       transactionType: type,
@@ -42,7 +61,6 @@ export const createTransaction = async ({ userId, type, name, quantity, price, d
       date
     }], { session });
 
-    // call update functions (they use session via closure)
     if (type === "BUY") {
       await updateHoldingBuy({ portfolioId: portfolio._id, name: symbol, quantity, price, date, session });
     } else {
@@ -53,12 +71,13 @@ export const createTransaction = async ({ userId, type, name, quantity, price, d
       portfolioId: portfolio._id,
       session 
     });
+    
     await session.commitTransaction();
     session.endSession();
 
-    await cacheDelPattern(`dashboard:${userId}:*`);
-    await cacheDelPattern(`portfolio:${userId}:*`);
-    logger.info("User cached invalidated after transactions", {userId});
+    await cacheDel(`dashboard:v2:${userId}`);
+    await cacheDel(`portfolio:v2:${userId}:page`);
+    logger.info("User cache invalidated after transactions", { userId });
 
     return createdTx;
   } catch (error) {
@@ -71,16 +90,12 @@ export const createTransaction = async ({ userId, type, name, quantity, price, d
 
 /**
  * Update holdings for a normal BUY (not a delete reverse).
- * - If holding doesn't exist -> create it
- * - Else -> update quantity and weighted avg
- *
- * NOTE: session must be passed explicitly.
  */
 async function updateHoldingBuy({ portfolioId, name, quantity, price, date, session }) {
   const holding = await Holdings.findOne({ Portfolio: portfolioId, symbol: name }).session(session);
 
   if (!holding) {
-    logger.info("Holding created");
+    logger.info("Holding created", { portfolioId, symbol: name });
     await Holdings.create([{
       Portfolio: portfolioId,
       symbol: name,
@@ -91,7 +106,6 @@ async function updateHoldingBuy({ portfolioId, name, quantity, price, date, sess
     return;
   }
 
-  // existing holding -> weighted average
   const totalQuantity = Number(holding.Quantity) + Number(quantity);
   const totalInvestment = (Number(holding.avgBuyPrice) * Number(holding.Quantity)) + (price * quantity);
 
@@ -100,22 +114,17 @@ async function updateHoldingBuy({ portfolioId, name, quantity, price, date, sess
   holding.lastBuyDate = date;
 
   await holding.save({ session });
-  logger.info("Holding updated (BUY)");
+  logger.info("Holding updated (BUY)", { symbol: name });
 }
 
 /**
  * Update holdings for a normal SELL (not a delete reverse).
- * - Validate quantity
- * - Decrease quantity
- * - If quantity becomes 0 -> delete holding
- *
- * NOTE: session must be passed explicitly.
  */
 async function updateHoldingSell({ portfolioId, name, quantity, price, date, session }) {
   const holding = await Holdings.findOne({ Portfolio: portfolioId, symbol: name }).session(session);
 
   if (!holding) {
-    logger.info("Attempted SELL but no holding found");
+    logger.info("Attempted SELL but no holding found", { symbol: name });
     throw new ApiError(400, "Holding not found");
   }
 
@@ -125,27 +134,25 @@ async function updateHoldingSell({ portfolioId, name, quantity, price, date, ses
   }
 
   if (totalQuantity === 0) {
-    // delete the single holding document
     await holding.deleteOne({ session });
-    logger.info("Holding deleted (SELL left 0)");
+    logger.info("Holding deleted (SELL left 0)", { symbol: name });
     return;
   }
 
   holding.Quantity = totalQuantity;
   await holding.save({ session });
-  logger.info("Holding updated (SELL)");
+  logger.info("Holding updated (SELL)", { symbol: name });
 }
 
-/* ---------------------------
-   Transactions listing
-   --------------------------- */
+/**
+ * Transactions listing
+ */
 export const getTransactions = async ({ userId, page = 1, limit = 8 }) => {
   const currentPage = Math.max(Number(page) || 1, 1);
   const pageSize = Math.min(Math.max(Number(limit) || 8, 1), 100);
   const skip = (currentPage - 1) * pageSize;
-  const portfolio = await Portfolio.findOne({ user: userId });
+  const portfolio = await Portfolio.findOne({ user: userId }).lean();
   
-
   if (!portfolio) {
     return {
       transactions: [],
@@ -162,7 +169,8 @@ export const getTransactions = async ({ userId, page = 1, limit = 8 }) => {
     Transaction.find({ Portfolio: portfolio._id })
       .sort({ date: -1, _id: -1 })
       .skip(skip)
-      .limit(pageSize),
+      .limit(pageSize)
+      .lean(),
     Transaction.countDocuments({ Portfolio: portfolio._id })
   ]);
 
@@ -177,20 +185,15 @@ export const getTransactions = async ({ userId, page = 1, limit = 8 }) => {
   };
 };
 
-/* ---------------------------
-   Remove (delete) a single transaction
-   - Must be atomic: delete transaction + update holdings in same session
-   - Must reverse effects:
-     * If deleted transaction is SELL -> increase holding quantity (avg unchanged)
-     * If deleted transaction is BUY -> recalc holdings from remaining BUYs
-   - Input: userId and transactionId (transaction to delete)
-   --------------------------- */
+/**
+ * Remove (delete) a single transaction
+ */
 export const removeTransaction = async ({ userId, transactionId }) => {
   if (!transactionId) {
     throw new ApiError(400, "transactionId is required");
   }
 
-  const portfolio = await Portfolio.findOne({ user: userId });
+  const portfolio = await Portfolio.findOne({ user: userId }).lean();
   if (!portfolio) {
     throw new ApiError(400, "Portfolio not found");
   }
@@ -199,7 +202,6 @@ export const removeTransaction = async ({ userId, transactionId }) => {
   session.startTransaction();
 
   try {
-    // find & delete the specific transaction for this portfolio
     const deletedTx = await Transaction.findOneAndDelete({
       _id: transactionId,
       Portfolio: portfolio._id
@@ -209,7 +211,6 @@ export const removeTransaction = async ({ userId, transactionId }) => {
       throw new ApiError(400, "Transaction not found");
     }
 
-    // reverse the deleted transaction's effect
     if (deletedTx.transactionType === "SELL") {
       await reverseSell({
         portfolioId: portfolio._id,
@@ -229,9 +230,9 @@ export const removeTransaction = async ({ userId, transactionId }) => {
     await session.commitTransaction();
     session.endSession();
 
-    await cacheDelPattern(`dashboard:${userId}*`);
-    await cacheDelPattern(`portfolio:${userId}*`);
-   logger.info("User caches invalidated after transaction deletion", { userId });
+    await cacheDel(`dashboard:v2:${userId}`);
+    await cacheDel(`portfolio:v2:${userId}:page`);
+    logger.info("User caches invalidated after transaction deletion", { userId });
 
     return deletedTx;
   } catch (error) {
@@ -243,24 +244,9 @@ export const removeTransaction = async ({ userId, transactionId }) => {
 };
 
 const validateImportedTransaction = (row) => {
-  if (!["BUY", "SELL"].includes(row.type)) {
-    throw new ApiError(400, "Transaction type must be BUY or SELL.");
-  }
-
-  if (!row.name) {
-    throw new ApiError(400, "Stock name is required.");
-  }
-
-  if (!Number.isInteger(Number(row.quantity)) || Number(row.quantity) < 1) {
-    throw new ApiError(400, "Quantity must be a whole number greater than 0.");
-  }
-
-  if (!Number(row.price) || Number(row.price) < 1) {
-    throw new ApiError(400, "Price must be greater than 0.");
-  }
-
-  if (!/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(row.date || "")) {
-    throw new ApiError(400, "Date must be in YYYY-MM-DD format.");
+  const { error } = importedTransactionSchema.validate(row);
+  if (error) {
+    throw new ApiError(400, error.details[0].message);
   }
 };
 
@@ -296,41 +282,32 @@ export const importTransactions = async ({ userId, transactions = [] }) => {
   };
 };
 
-/* ---------------------------
-   reverseSell: deleting a SELL transaction => increase holding quantity
-   --------------------------- */
+/**
+ * Deleting a SELL transaction => increase holding quantity
+ */
 async function reverseSell({ portfolioId, name, quantity, session }) {
   const holding = await Holdings.findOne({ Portfolio: portfolioId, symbol: name }).session(session);
 
   if (!holding) {
-    // If there is no holding, it's possible the sell existed alone (we can't reconstruct avg)
-    // Decision: throw an error to avoid inconsistent state. Alternatively you could create a holding,
-    // but you would not have a cost basis (avgBuyPrice). Safer to enforce integrity.
-    logger.info("reverseSell: holding not found");
+    logger.info("reverseSell: holding not found", { symbol: name });
     throw new ApiError(400, "Holding not found while reversing SELL");
   }
 
   holding.Quantity = holding.Quantity + quantity;
   await holding.save({ session });
-  logger.info("reverseSell: holding increased");
+  logger.info("reverseSell: holding increased", { symbol: name });
 }
 
-/* ---------------------------
-   reverseBuy: deleting a BUY transaction => rebuild holding from remaining BUYs
-   Steps:
-     1) Fetch remaining BUY transactions for the same portfolio+symbol excluding deleted id
-     2) If none remain -> delete holding
-     3) Else compute total qty and total investment and set avgBuyPrice
-   --------------------------- */
+/**
+ * Deleting a BUY transaction => rebuild holding from remaining BUYs
+ */
 async function reverseBuy({ portfolioId, name, transactionId, session }) {
-  // fetch existing holding
   const holding = await Holdings.findOne({ Portfolio: portfolioId, symbol: name }).session(session);
   if (!holding) {
-    logger.info("reverseBuy: holding not found");
+    logger.info("reverseBuy: holding not found", { symbol: name });
     throw new ApiError(400, "Holding not found while reversing BUY");
   }
 
-  // fetch remaining BUY transactions (exclude the deleted one)
   const remainingBuys = await Transaction.find({
     Portfolio: portfolioId,
     symbol: name,
@@ -338,14 +315,12 @@ async function reverseBuy({ portfolioId, name, transactionId, session }) {
     _id: { $ne: transactionId }
   }).session(session);
 
-  // if no BUYs left, delete the holding
   if (!remainingBuys || remainingBuys.length === 0) {
     await holding.deleteOne({ session });
-    logger.info("reverseBuy: no remaining buys -> holding deleted");
+    logger.info("reverseBuy: no remaining buys -> holding deleted", { symbol: name });
     return;
   }
 
-  // recalc totals
   let totalQuantity = 0;
   let totalInvestment = 0;
   for (const buy of remainingBuys) {
@@ -353,18 +328,15 @@ async function reverseBuy({ portfolioId, name, transactionId, session }) {
     totalInvestment += (buy.quantity * buy.pricePerUnit);
   }
 
-  // update holding
   holding.Quantity = totalQuantity;
   holding.avgBuyPrice = totalInvestment / totalQuantity;
 
-  // lastBuyDate should be the date of the most recent BUY remaining
-  // sort remaining buys by date to be safe (they might not be ordered)
   remainingBuys.sort((a, b) => new Date(a.date) - new Date(b.date));
   const lastBuy = remainingBuys[remainingBuys.length - 1];
   holding.lastBuyDate = lastBuy.date;
 
   await holding.save({ session });
-  logger.info("reverseBuy: holding recalculated from remaining buys");
+  logger.info("reverseBuy: holding recalculated from remaining buys", { symbol: name });
 }
 
 const transaction = {

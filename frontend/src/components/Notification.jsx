@@ -1,73 +1,67 @@
-import { useState, useEffect } from 'react'
-import React from 'react'
+import React, { useEffect, useState, useRef } from 'react';
 
+const TYPE_STYLE = {
+  success: 'profit',
+  error: 'loss',
+  warning: 'text-[var(--warning)]',
+  info: 'muted',
+};
+
+/**
+ * Accessible notification toast.
+ * Uses a stable ref for `onClose` to prevent effect/timer resets on parent re-renders.
+ */
 const Notification = ({ message, type = 'info', onClose }) => {
-  const [isVisible, setIsVisible] = useState(true)
+  const [isVisible, setIsVisible] = useState(true);
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsVisible(false)
-      setTimeout(() => {
-        onClose && onClose()
-      }, 300) // Wait for fade out animation
-    }, 5000) // Auto close after 5 seconds
+    // 5-second auto-close
+    const autoCloseTimer = setTimeout(() => {
+      setIsVisible(false);
+      const exitTimer = setTimeout(() => {
+        if (onCloseRef.current) onCloseRef.current();
+      }, 300);
+      return () => clearTimeout(exitTimer);
+    }, 5000);
 
-    return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    return () => clearTimeout(autoCloseTimer);
+  }, []);
 
   const handleClose = () => {
-    setIsVisible(false)
+    setIsVisible(false);
     setTimeout(() => {
-      onClose && onClose()
-    }, 300)
-  }
-
-  const getTypeStyles = () => {
-    switch (type) {
-      case 'success':
-        return 'bg-green-500 text-white'
-      case 'error':
-        return 'bg-red-500 text-white'
-      case 'warning':
-        return 'bg-yellow-500 text-white'
-      default:
-        return 'bg-blue-500 text-white'
-    }
-  }
+      if (onCloseRef.current) onCloseRef.current();
+    }, 300);
+  };
 
   return (
     <div
-      className={`min-w-[300px] max-w-md rounded-lg shadow-lg p-4 transition-all duration-300 ${
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-      } ${getTypeStyles()}`}
+      role="alert"
+      className={`min-w-[300px] max-w-md rounded border p-4 transition-all duration-300 ease-out transform ${
+        isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-2 opacity-0 scale-95'
+      }`}
+      style={{
+        background: 'var(--surface)',
+        borderColor: 'var(--line)',
+        willChange: 'transform, opacity',
+      }}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="font-medium">{message}</p>
-        </div>
+      <div className="flex items-start justify-between gap-4">
+        <p className={`text-sm font-medium ${TYPE_STYLE[type] || ''}`}>{message}</p>
         <button
           onClick={handleClose}
-          className="ml-4 text-white hover:text-gray-200 transition-colors"
+          className="text-sm font-semibold muted hover:text-[var(--text)] focus:outline-none focus:ring-1 focus:ring-[var(--line-strong)] rounded px-1 transition-colors"
+          aria-label="Close notification"
         >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
+          ✕
         </button>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Notification
-
+export default Notification;

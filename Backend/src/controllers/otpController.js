@@ -2,43 +2,25 @@ import logger from "../utilities/logger.js";
 import { otpGenerator, otpVerify } from "../services/otpServices.js";
 import ApiResponse from "../utilities/apiResponse.js";
 import { sendOtpEmail } from "../services/emailServices.js";
+import { asyncHandler } from "../utilities/asyncHandler.js";
 
-export const sendOtp = async(req, res, next)=>{
-    try {
-        const email =  req.body.email;
-        logger.info("OTP generationg attemped", {email})
+export const sendOtp = asyncHandler(async (req, res, next) => {
+  const email = req.body.email;
+  logger.info("OTP generating attempted", { email });
 
-        const otp = await otpGenerator(email)
+  const otp = await otpGenerator(email);
+  await sendOtpEmail(email, otp);
 
-        await sendOtpEmail(email, otp)
+  logger.info("OTP generating successful", { email });
+  return res.status(200).json(new ApiResponse(200, otp, "success"));
+});
 
-        logger.info("OTP generationg successful", {email})
-        return res.status(200).json(new ApiResponse(200, otp, "success"));
-    } catch (error) {
-         logger.error("Error while generating OTP", {
-            message: error.message,
-            stack: error.stack
-        });
-        next(error);
-    }
-}
+export const verifyOtp = asyncHandler(async (req, res, next) => {
+  const { email, otp } = req.body;
+  logger.info("Checking OTP", { email });
 
-export const verifyOtp = async(req, res, next)=>{
-    try {
-        const { email, otp } = req.body;
-        
-        logger.info("checking OTP",{email})
+  await otpVerify(email, otp);
 
-        await otpVerify(email, otp);
-
-        logger.info("OTP verified successfully",{email})
-
-        return res.status(200).json(new ApiResponse(200, null, "success"));
-    } catch (error) {
-         logger.error("Error while generating OTP", {
-        message: error.message,
-        stack: error.stack
-    });
-    next(error)
-    }
-}
+  logger.info("OTP verified successfully", { email });
+  return res.status(200).json(new ApiResponse(200, null, "success"));
+});

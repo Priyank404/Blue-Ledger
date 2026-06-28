@@ -1,89 +1,94 @@
 import { getLivePriceCached } from "./stockPriceCacheServices.js";
-import { Portfolio} from "../models/portfolioSchema.js";
+import { Portfolio } from "../models/portfolioSchema.js";
 import { Holdings } from "../models/holdingSchema.js";
 import logger from "../utilities/logger.js";
 
-export const calculatePortfolioAnalytics = async ({userId}) =>{
-
-    try {
-        const portfolio = await Portfolio.findOne({user: userId});
-    if(!portfolio){
-        return emptyPortfolioData();
+/**
+ * Calculates complete portfolio-level metrics and allocations.
+ */
+export const calculatePortfolioAnalytics = async ({ userId }) => {
+  try {
+    const portfolio = await Portfolio.findOne({ user: userId }).lean();
+    if (!portfolio) {
+      return emptyPortfolioData();
     }
 
-    const holdings = await Holdings.find({Portfolio: portfolio._id});
-     if(!holdings || holdings.length === 0){
-        return emptyPortfolioData();
+    const holdings = await Holdings.find({ Portfolio: portfolio._id }).lean();
+    if (!holdings || holdings.length === 0) {
+      return emptyPortfolioData();
     }
 
     const symbols = holdings.map(h => h.symbol);
-    const livePrice = await getLivePriceCached(symbols);
+    const { priceMap, sectorMap, priceSourceMap, marketDataStatus } = await getPriceMapsForHoldings(holdings, symbols);
 
-    const priceMap = {};
-    const sectorMap = {};
+    const holdingWithPnL = holdings.map((h) => {
+      const currentPrice = priceMap[h.symbol] ?? Number(h.avgBuyPrice) ?? 0;
+      const sector = sectorMap[h.symbol] || "Others";
+      const qty = Number(h.Quantity);
+      const avgPrice = Number(h.avgBuyPrice.toFixed(2)) || 0;
+      const investedValue = avgPrice * qty;
+      const currentValue = Number((currentPrice * qty).toFixed(2));
+      const pnl = Number((currentValue - investedValue).toFixed(2));
 
-    livePrice.forEach((p) => {
-        priceMap[p.symbol] = p.lastPrice;
-        sectorMap[p.symbol] = p.sector || "Other";
-    })
+      return {
+        id: h._id,
+        symbol: h.symbol,
+        sector,
+        avgBuyPrice: avgPrice,
+        Quantity: qty,
+        currentPrice: currentPrice,
+        priceSource: priceSourceMap[h.symbol] || "fallback",
+        investedValue: investedValue,
+        currentValue: currentValue,
+        pnl: pnl,
+        pnlPercentage: investedValue > 0 ? Number(((pnl / investedValue) * 100).toFixed(2)) : 0,
+        roi: investedValue > 0 ? Number(((pnl / investedValue) * 100).toFixed(2)) : 0,
+      };
+    });
 
-    const holdingWithPnL = holdings.map((h) =>{
-        const currentPrice = priceMap[h.symbol] || 0;
-        const sector = sectorMap[h.symbol] || "Others"
-        const qty = Number(h.Quantity);
-        const avgPrice = Number((h.avgBuyPrice).toFixed(2)) || 0;
-        const investedValue = avgPrice * qty;
-        const currentValue = Number((currentPrice * qty).toFixed(2));
-        const pnl = Number((currentValue - investedValue).toFixed(2));
-
-        return {
-            id: h._id,
-            symbol: h.symbol,
-            sector,
-            avgBuyPrice: avgPrice,
-            Quantity: qty,
-            currentPrice: currentPrice,
-            investedValue: investedValue,
-            currentValue: currentValue,
-            pnl: pnl,
-            pnlPercentage: investedValue > 0 ? Number(((pnl / investedValue) * 100).toFixed(2)) : "0.00",
-            roi: investedValue > 0 ? Number(((pnl / investedValue) * 100).toFixed(2)) : "0.00",
-        }
-    })
-
-    //Calculate Totals
-    const totalInvestment = Number(holdingWithPnL.reduce((sum , h) => sum + h.investedValue, 0).toFixed(2));
+    // Calculate Totals
+    const totalInvestment = Number(holdingWithPnL.reduce((sum, h) => sum + h.investedValue, 0).toFixed(2));
     const currentTotalValue = Number(holdingWithPnL.reduce((sum, h) => sum + h.currentValue, 0).toFixed(2));
     const totalPnl = Number((currentTotalValue - totalInvestment).toFixed(2));
     const totalPnlPercentage = totalInvestment > 0 ? ((totalPnl / totalInvestment) * 100).toFixed(2) : "0.00";
     const overallRoi = totalInvestment > 0 ? ((totalPnl / totalInvestment) * 100).toFixed(2) : "0.00";
 
-    //Sorting and Categorizing
+    // Sorting and Categorizing
     const sorted = [...holdingWithPnL].sort((a, b) => b.pnl - a.pnl);
     const profitStock = sorted.filter((h) => h.pnl > 0);
     const lossStock = sorted.filter((h) => h.pnl < 0);
     const neturalStock = sorted.filter((h) => h.pnl === 0);
 
-    const topPerformerStock = profitStock.slice(0,3);
-    const topLosserStock = lossStock.slice(0,3);
+    const topPerformerStock = profitStock.slice(0, 3);
+    const topLosserStock = lossStock.slice(0, 3);
 
-    //Sector Allocations 
-    const sectorValueMap={};
-
+    // Sector Allocations 
+    const sectorValueMap = {};
     holdingWithPnL.forEach((h) => {
-        sectorValueMap[h.sector] = (sectorValueMap[h.sector] || 0) + h.currentValue;
+      sectorValueMap[h.sector] = (sectorValueMap[h.sector] || 0) + h.currentValue;
     });
 
-    const sectorAllocation = Object.entries(sectorValueMap).map(([sector, value]) => ({
-      name: sector,
-      value: currentTotalValue > 0 ? Number(((value / currentTotalValue) * 100).toFixed(2)) : "0.00",
-    }));
+    const sectorAllocation = Object.entries(sectorValueMap).map(([sector, value]) => {
+      const sourceBreakdown = holdingWithPnL
+        .filter((h) => h.sector === sector)
+        .reduce((acc, h) => {
+          acc[h.priceSource] = (acc[h.priceSource] || 0) + 1;
+          return acc;
+        }, {});
 
-    //Sector Profit
+      return {
+        name: sector,
+        sector,
+        value: Number(value.toFixed(2)),
+        percentage: currentTotalValue > 0 ? Number(((value / currentTotalValue) * 100).toFixed(2)) : 0,
+        sourceBreakdown,
+      };
+    }).sort((a, b) => b.value - a.value);
+
+    // Sector Profit
     const sectorProfitMap = {};
-
     holdingWithPnL.forEach((h) => {
-        sectorProfitMap[h.sector] = (sectorProfitMap[h.sector] || 0) + h.pnl;
+      sectorProfitMap[h.sector] = (sectorProfitMap[h.sector] || 0) + h.pnl;
     });
 
     const sectorProfit = Object.entries(sectorProfitMap).map(([sector, profit]) => ({
@@ -91,30 +96,28 @@ export const calculatePortfolioAnalytics = async ({userId}) =>{
       profit: Number(profit.toFixed(2)),
     }));
 
-
-    //PnL Distributions
+    // PnL Distributions
     const pnlDistribution = holdingWithPnL.map((h) => ({
       name: h.symbol,
       pnl: h.pnl,
       pnlPercent: h.pnlPercentage,
     }));
 
-    //Value Allocations
+    // Value Allocations
     const valueAllocation = holdingWithPnL.map((h) => ({
-        name: h.symbol,
-        value: h.currentValue,
-        percentage: currentTotalValue > 0 ? ((h.currentValue / currentTotalValue) * 100).toFixed(1) : "0.0",
+      name: h.symbol,
+      value: h.currentValue,
+      percentage: currentTotalValue > 0 ? ((h.currentValue / currentTotalValue) * 100).toFixed(1) : "0.0",
     })).sort((a, b) => b.value - a.value);
 
-
-    //Holding Status
+    // Holding Status
     const holdingStatus = {
       profit: profitStock.length,
       loss: lossStock.length,
       neutral: neturalStock.length,
     };
 
-    //Pnl Contributions
+    // Pnl Contributions
     const profitContribution = profitStock
       .map((h) => ({
         name: h.symbol,
@@ -131,39 +134,85 @@ export const calculatePortfolioAnalytics = async ({userId}) =>{
       }))
       .sort((a, b) => b.value - a.value);
 
+    return {
+      totalInvestment,
+      currentTotalValue,
+      totalPnl,
+      numberOfStocks: holdings.length,
+      holdings: holdingWithPnL,
+      overallRoi,
+      topPerformerStock,
+      topLosserStock,
+      sectorAllocation,
+      sectorProfit,
+      pnlDistribution,
+      valueAllocation,
+      holdingStatus,
+      profitContribution,
+      lossContribution,
+      marketDataStatus
+    };
 
+  } catch (error) {
+    logger.error("Error while calculating portfolio analytics", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    throw error;
+  }
+};
 
+async function getPriceMapsForHoldings(holdings, symbols) {
+  const priceMap = {};
+  const sectorMap = {};
+  const priceSourceMap = {};
+  let liveAvailable = true;
 
+  try {
+    const livePrice = await getLivePriceCached(symbols);
+    livePrice.forEach((p) => {
+      priceMap[p.symbol] = Number(p.lastPrice);
+      sectorMap[p.symbol] = p.sector || "Other";
+      priceSourceMap[p.symbol] = "live";
+    });
+  } catch (error) {
+    liveAvailable = false;
+    logger.warn("Live market data unavailable, using buy-price fallback", {
+      message: error.message,
+    });
+  }
 
-
-      return{
-          totalInvestment,
-          currentTotalValue,
-          totalPnl,
-          numberOfStocks: holdings.length,
-          holdings: holdingWithPnL,
-          overallRoi,
-          topPerformerStock,
-          topLosserStock,
-          sectorAllocation,
-          sectorProfit,
-          pnlDistribution,
-          valueAllocation,
-          holdingStatus,
-          profitContribution,
-          lossContribution
-      }
-
-    } catch (error) {
-        logger.error("Error while calculating portfolio analytics", {
-          message: error.message,
-          stack: error.stack,
-          name: error.name,
-        });
-        throw error;
+  holdings.forEach((holding) => {
+    if (priceMap[holding.symbol] === undefined) {
+      priceMap[holding.symbol] = Number(holding.avgBuyPrice) || 0;
+      priceSourceMap[holding.symbol] = "fallback";
     }
-}
+    if (!sectorMap[holding.symbol]) {
+      sectorMap[holding.symbol] = liveAvailable ? "Other" : "Sector unavailable";
+    }
+  });
 
+  const sourceCounts = holdings.reduce((acc, holding) => {
+    const source = priceSourceMap[holding.symbol] || "fallback";
+    acc[source] = (acc[source] || 0) + 1;
+    return acc;
+  }, { live: 0, saved: 0, fallback: 0 });
+
+  const marketDataStatus = {
+    source:
+      sourceCounts.live === holdings.length
+        ? "live"
+        : sourceCounts.live > 0
+          ? "mixed"
+          : "fallback",
+    liveAvailable,
+    sourceCounts,
+    updatedAt: new Date().toISOString(),
+  };
+
+  return { priceMap, sectorMap, priceSourceMap, marketDataStatus };
+}
 
 function emptyPortfolioData() {
   return {
@@ -182,5 +231,11 @@ function emptyPortfolioData() {
     holdingStatus: { profit: 0, loss: 0, neutral: 0 },
     profitContribution: [],
     lossContribution: [],
+    marketDataStatus: {
+      source: "empty",
+      liveAvailable: false,
+      sourceCounts: { live: 0, saved: 0, fallback: 0 },
+      updatedAt: new Date().toISOString(),
+    },
   };
 }

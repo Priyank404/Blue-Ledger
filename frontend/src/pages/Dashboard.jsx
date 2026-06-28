@@ -1,342 +1,205 @@
-import { useMemo, useState } from 'react'
-import DashboardLayout from '../layouts/DashboardLayout'
-import StatCard from '../components/StatCard'
-import TransactionsTable from '../components/TransactionsTable'
-import { useDashboard } from '../context/DashboardContext'
+import React, { useMemo, useState } from 'react';
+import DashboardLayout from '../layouts/DashboardLayout';
+import StatCard from '../components/StatCard';
+import TransactionsTable from '../components/TransactionsTable';
+import { useDashboard } from '../context/DashboardContext';
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
+  Bar,
+  BarChart,
   CartesianGrid,
-  Tooltip,
+  Cell,
+  Line,
+  LineChart,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts'
-import { useChart } from '../context/ChartContext'
-import { useHoldings } from '../context/HoldingsContext'
-import { HISTORY_RANGES, buildPortfolioHistory, formatHistoryLabel } from '../utilities/portfolioHistory'
+  Tooltip,
+  XAxis,
+  YAxis
+} from 'recharts';
+import { HISTORY_RANGES, buildPortfolioHistory, formatHistoryLabel } from '../utilities/portfolioHistory';
+import { formatCurrency } from '../utilities/formatters';
 
-const COLORS = [
-  '#3b82f6',
-  '#16a34a',
-  '#f59e0b',
-  '#8b5cf6',
-  '#ec4899',
-  '#14b8a6'
-]
+const PROFIT_COLORS = ['#28c789', '#20a874', '#17895f', '#116a4b', '#0e513b'];
+const LOSS_COLORS = ['#ff6b6b', '#e64f4f', '#c93b3b', '#a82f2f', '#842626'];
 
-// Green shades (dark → light)
-const getGreenShade = (index, total) => {
-  const lightness = 35 + (index / Math.max(total - 1, 1)) * 40;
-  return `hsl(142, 70%, ${lightness}%)`;
-};
-
-// Red shades (dark → light)
-const getRedShade = (index, total) => {
-  const lightness = 35 + (index / Math.max(total - 1, 1)) * 40;
-  return `hsl(0, 70%, ${lightness}%)`;
-};
-
-const getStatusColor = (pnl) => {
-  if (pnl > 0) return "#16a34a"; // green
-  if (pnl < 0) return "#dc2626"; // red
-  return "#9ca3af";              // gray
-};
-
-
+/**
+ * Main dashboard view offering a high-level overview of portfolio metrics, equity curve, profit/loss leaders, and recent transactions.
+ */
 const Dashboard = () => {
-  const [historyRange, setHistoryRange] = useState('daily')
-  /* ================= CONTEXTS ================= */
-  const { dashboardData, loading} = useDashboard();
-
-
-  /* ================= HELPERS ================= */
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(amount)
-
-
-
-  // label render 
- const renderPieLabel = ({
-  cx,
-  cy,
-  midAngle,
-  outerRadius,
-  percent,
-  name,
-  payload
-}) => {
-  if (percent < 0.02) return null; // optional cutoff
-
-  const RADIAN = Math.PI / 180;
-  const sin = Math.sin(-RADIAN * midAngle);
-  const cos = Math.cos(-RADIAN * midAngle);
-
-  const startX = cx + outerRadius * cos;
-  const startY = cy + outerRadius * sin;
-
-  const midX = cx + (outerRadius + 14) * cos;
-  const midY = cy + (outerRadius + 14) * sin;
-
-  const endX = midX + (cos >= 0 ? 18 : -18);
-  const endY = midY;
-
-  const color = getStatusColor(payload.pnl);
-
-  return (
-    <g>
-      {/* Arrow line */}
-      <path
-        d={`M${startX},${startY} L${midX},${midY} L${endX},${endY}`}
-        stroke={color}
-        fill="none"
-        strokeWidth={1}
-      />
-
-      {/* Dot */}
-      <circle cx={endX} cy={endY} r={2} fill={color} />
-
-      {/* Text */}
-      <text
-        x={endX + (cos >= 0 ? 4 : -4)}
-        y={endY}
-        textAnchor={cos >= 0 ? "start" : "end"}
-        dominantBaseline="central"
-        fill={color}
-        fontSize={12}
-        fontWeight={500}
-      >
-        {`${name} ${(percent * 100).toFixed(1)}%`}
-      </text>
-    </g>
-  );
-};
+  const [historyRange, setHistoryRange] = useState('daily');
+  const { dashboardData, loading } = useDashboard();
 
   const {
-  totalInvestment = 0,
-  currentTotalValue = 0,
-  totalPnl = 0,
-  numberOfStocks = 0,
-  portfolioHistory = [],
-  recentTransaction = [],
-  profitContribution = [],
-  lossContribution = []
-} = dashboardData || {}
-
-
-const NoData = () => (
-    <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
-      No Data Available
-    </div>
-  );
+    totalInvestment = 0,
+    currentTotalValue = 0,
+    totalPnl = 0,
+    numberOfStocks = 0,
+    portfolioHistory = [],
+    recentTransaction = [],
+    profitContribution = [],
+    lossContribution = []
+  } = dashboardData || {};
 
   const chartPortfolioHistory = useMemo(
     () => buildPortfolioHistory(portfolioHistory, historyRange),
     [portfolioHistory, historyRange]
   );
 
-  /* ================= LOADING ================= */
-   if (loading) {
+  const roi = useMemo(() => {
+    if (!totalInvestment) return '0.00';
+    return ((totalPnl / totalInvestment) * 100).toFixed(2);
+  }, [totalPnl, totalInvestment]);
+
+  if (loading) {
     return (
       <DashboardLayout>
-        <p className="text-gray-900 dark:text-white">Loading dashboard...</p>
+        <div className="screen" role="status">
+          <div className="empty">Loading dashboard...</div>
+        </div>
       </DashboardLayout>
-    )
+    );
   }
 
-  /* ================= UI ================= */
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Dashboard
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Welcome back! Here's your portfolio overview.
-          </p>
-        </div>
+      <div className="screen">
+        {/* Title & Overall P/L */}
+        <section className="screen-head" aria-label="Dashboard metrics header">
+          <div>
+            <p className="eyebrow">Overview</p>
+            <h1 className="screen-title">Portfolio Command</h1>
+          </div>
+          <div className="tile tile-pad min-w-64">
+            <p className="metric-label">Session P/L</p>
+            <p className={`metric-value ${totalPnl >= 0 ? 'profit' : 'loss'}`}>
+              {totalPnl >= 0 ? '+' : ''}{formatCurrency(totalPnl)}
+            </p>
+            <p className={`metric-note ${totalPnl >= 0 ? 'profit' : 'loss'}`}>
+              {totalPnl >= 0 ? '+' : ''}{roi}% ROI
+            </p>
+          </div>
+        </section>
 
-        {/* Stat Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard
-            title="Total Investment"
-            value={formatCurrency(totalInvestment)}
-            icon="💰"
-          />
-          <StatCard
-            title="Total Gain/Loss"
-            value={formatCurrency(totalPnl)}
-            subtitle={`${((totalPnl / totalInvestment) * 100).toFixed(2)}%`}
-            trend={totalPnl >= 0 ? 'up' : 'down'}
-            icon="📈"
-          />
-          <StatCard
-            title="Number of Stocks"
-            value={numberOfStocks}
-            icon="📊"
-          />
-          <StatCard
-            title="Portfolio Value"
-            value={formatCurrency(currentTotalValue)}
-            icon="💼"
-          />
-        </div>
+        {/* High-level metrics */}
+        <section className="metric-grid" aria-label="Key performance indicators">
+          <StatCard title="Capital Deployed" value={formatCurrency(totalInvestment)} />
+          <StatCard title="Market Value" value={formatCurrency(currentTotalValue)} />
+          <StatCard title="Net Gain/Loss" value={formatCurrency(totalPnl)} subtitle={`${roi}%`} trend={totalPnl >= 0 ? 'up' : 'down'} />
+          <StatCard title="Open Holdings" value={numberOfStocks} subtitle="Tracked symbols" />
+        </section>
 
-        {/* Overall Portfolio Graph */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Overall Portfolio Graph
-            </h2>
-            <div className="flex flex-wrap gap-2">
-              {HISTORY_RANGES.map((range) => (
-                <button
-                  key={range.key}
-                  type="button"
-                  onClick={() => setHistoryRange(range.key)}
-                  className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-                    historyRange === range.key
-                      ? 'bg-primary-600 text-white'
-                      : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {range.label}
-                </button>
-              ))}
+        {/* Charts: Equity Curve and Leaders */}
+        <section className="grid gap-4 xl:grid-cols-[1.6fr_0.9fr]">
+          {/* Equity curve chart */}
+          <div className="tile tile-pad">
+            <div className="tile-head">
+              <div>
+                <h2 className="tile-title">Equity Curve</h2>
+              </div>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Timeframe filter">
+                {HISTORY_RANGES.map((range) => (
+                  <button
+                    key={range.key}
+                    type="button"
+                    onClick={() => setHistoryRange(range.key)}
+                    className={historyRange === range.key ? 'btn-primary h-8 text-xs' : 'btn-ghost h-8 text-xs'}
+                    aria-pressed={historyRange === range.key}
+                  >
+                    {range.label}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {chartPortfolioHistory.length > 0 ? (
+              <div className="w-full" style={{ height: 360 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartPortfolioHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid stroke="var(--line)" strokeDasharray="2 6" />
+                    <XAxis
+                      dataKey="day"
+                      tick={{ fill: 'var(--muted)', fontSize: 11 }}
+                      tickFormatter={(value) => formatHistoryLabel(value, historyRange)}
+                    />
+                    <YAxis
+                      tick={{ fill: 'var(--muted)', fontSize: 11 }}
+                      tickFormatter={(value) => `INR ${(value / 1000).toFixed(0)}k`}
+                    />
+                    <Tooltip
+                      formatter={(value) => formatCurrency(value)}
+                      labelFormatter={(label) => formatHistoryLabel(label, historyRange)}
+                      contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 4, color: 'var(--text)' }}
+                    />
+                    <Line type="monotone" dataKey="value" stroke="var(--accent)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="empty">No portfolio history available</div>
+            )}
           </div>
 
-          {chartPortfolioHistory.length > 0 ?  (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartPortfolioHistory}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="day"
-                  tickFormatter={(value) => formatHistoryLabel(value, historyRange)}
-                />
-                <YAxis
-                  tickFormatter={(value) =>
-                    `₹${(value / 1000).toFixed(0)}k`
-                  }
-                />
-                <Tooltip
-                  formatter={(value) => formatCurrency(value)}
-                  labelFormatter={(label) => formatHistoryLabel(label, historyRange)}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          ):(
-          <NoData/>
-          ) }
-        </div>
-
-        {/* PROFIT & LOSS CONTRIBUTION (DUAL PIE) */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-            Profit & Loss Contribution
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Profit Pie */}
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-green-600 mb-2">
-                Profit Contribution
-              </h3>
-
-              {profitContribution.length === 0 ? (
-                <p className="text-sm text-gray-500">
-                  No profitable stocks
-                </p>
+          {/* Leaders stats list */}
+          <div className="grid-stack">
+            {/* Profit Leaders */}
+            <div className="tile tile-pad">
+              <h2 className="tile-title mb-3">Profit Leaders</h2>
+              {profitContribution.length > 0 ? (
+                <div style={{ height: 160 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={profitContribution.slice(0, 5)} layout="vertical" margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
+                      <XAxis type="number" hide />
+                      <YAxis type="category" dataKey="name" width={70} tick={{ fill: 'var(--muted)', fontSize: 11 }} />
+                      <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)' }} />
+                      <Bar dataKey="value" radius={[0, 3, 3, 0]}>
+                        {profitContribution.slice(0, 5).map((_, index) => (
+                          <Cell key={index} fill={PROFIT_COLORS[index % PROFIT_COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart>
-                    <Pie
-                      data={profitContribution}
-                      dataKey="value"
-                      nameKey="name"
-                      outerRadius={90}
-                      labelLine={false}          // 👈 THIS enables the arrow line
-                      label={renderPieLabel}    // 👈 Custom label
-                    >
-                      {profitContribution.map((_, index) => (
-                        <Cell
-                          key={index}
-                          fill={getGreenShade(index, profitContribution.length)}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(v) => formatCurrency(v)}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="empty min-h-32">No profitable holdings</div>
               )}
             </div>
 
-            {/* Loss Pie */}
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-red-600 mb-2">
-                Loss Contribution
-              </h3>
-
-              {lossContribution.length === 0 ? (
-                <p className="text-sm text-gray-500">
-                  No loss-making stocks 🎉
-                </p>
+            {/* Loss Leaders */}
+            <div className="tile tile-pad">
+              <h2 className="tile-title mb-3">Loss Leaders</h2>
+              {lossContribution.length > 0 ? (
+                <div style={{ height: 160 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={lossContribution.slice(0, 5)} layout="vertical" margin={{ top: 0, right: 10, left: -20, bottom: 0 }}>
+                      <XAxis type="number" hide />
+                      <YAxis type="category" dataKey="name" width={70} tick={{ fill: 'var(--muted)', fontSize: 11 }} />
+                      <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)' }} />
+                      <Bar dataKey="value" radius={[0, 3, 3, 0]}>
+                        {lossContribution.slice(0, 5).map((_, index) => (
+                          <Cell key={index} fill={LOSS_COLORS[index % LOSS_COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               ) : (
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart>
-                    <Pie
-                      data={lossContribution}
-                      dataKey="value"
-                      nameKey="name"
-                      outerRadius={90}
-                      labelLine={false}          // 👈 THIS enables the arrow line
-                      label={renderPieLabel}    // 👈 Custom label
-                    >
-                      {lossContribution.map((_, index) => (
-                        <Cell
-                          key={index}
-                          fill={getRedShade(index, lossContribution.length)}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(v) => formatCurrency(v)}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="empty min-h-32">No loss-making holdings</div>
               )}
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Recent Transactions */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            Recent Transactions
-          </h2>
+        {/* Recent Transactions Blotter */}
+        <section className="tile tile-pad" aria-labelledby="recent-tx-title">
+          <div className="tile-head">
+            <div>
+              <h2 id="recent-tx-title" className="tile-title">Recent Transactions</h2>
+            </div>
+          </div>
           <TransactionsTable transactions={recentTransaction} />
-        </div>
+        </section>
       </div>
     </DashboardLayout>
-  )
-}
+  );
+};
 
-export default Dashboard
+export default Dashboard;

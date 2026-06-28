@@ -5,7 +5,7 @@ export const getHoldings = async ()=>{
     return response.data.data
 }
 
-export const getPortfolioData = async () => {
-    const response = await api.get('/api/portfolio/analytic');
+export const getPortfolioData = async (options = {}) => {
+    const response = await api.get('/api/portfolio/analytic', options);
     return response.data.data
 }

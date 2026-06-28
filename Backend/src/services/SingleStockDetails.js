@@ -11,72 +11,88 @@ import mongoose from "mongoose";
 /**
  * Get complete stock details for individual stock page
  * Includes: holding data, live price, P/L calculations, price history, transactions
- * Uses Redis caching (5 minutes TTL)
+ * Uses short Redis caching because it includes live market value.
  */
-export const getStockDetailsService = async ({ userId, id  }) => {
-  const cacheKey = `stock:${userId}:${id}`;
+export const getStockDetailsService = async ({ userId, id }) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new ApiError(400, "Invalid stock holding ID format");
+  }
 
-  try {
-    // Check cache
-    const cached = await cacheGet(cacheKey);
-    if (cached) {
-      logger.info("Stock details cache HIT", { userId, id  });
-      return cached;
-    }
+  const cacheKey = `stock:v2:${userId}:${id}`;
 
-    logger.info("Stock details cache MISS", { userId, id  });
+  // Check cache
+  const cached = await cacheGet(cacheKey);
+  if (cached) {
+    logger.info("Stock details cache HIT", { userId, id });
+    return cached;
+  }
 
-    // 1. Get user's portfolio
-    const portfolio = await Portfolio.findOne({ user: userId });
-    if (!portfolio) {
-      throw new ApiError(404, "Portfolio not found");
-    }
+  logger.info("Stock details cache MISS", { userId, id });
 
-    // 2. Get holding by symbol
-    const holding = await Holdings.findOne({
-      Portfolio: portfolio._id,
-      _id: new mongoose.Types.ObjectId(id)
+  // 1. Get user's portfolio
+  const portfolio = await Portfolio.findOne({ user: userId }).lean();
+  if (!portfolio) {
+    throw new ApiError(404, "Portfolio not found");
+  }
+
+  // 2. Get holding by ID
+  const holding = await Holdings.findOne({
+    Portfolio: portfolio._id,
+    _id: new mongoose.Types.ObjectId(id)
+  }).lean();
+
+  if (!holding) {
+    throw new ApiError(404, `Holding not found or not owned by you`);
+  }
+
+  // 3. Parallelize queries (performance optimization)
+  const [priceHistory, livePriceDataResult] = await Promise.allSettled([
+    getStockHistory({ symbol: holding.symbol }),
+    getSingleLivePriceCached(holding.symbol)
+  ]);
+
+  const priceHistoryData = priceHistory.status === "fulfilled" ? priceHistory.value : [];
+  
+  let livePriceData = [];
+  let priceSource = "live";
+
+  if (livePriceDataResult.status === "fulfilled") {
+    livePriceData = livePriceDataResult.value;
+  } else {
+    priceSource = "fallback";
+    logger.warn("Live stock detail price unavailable, using buy-price fallback", {
+      symbol: holding.symbol,
+      message: livePriceDataResult.reason?.message,
     });
+  }
 
-    if (!holding) {
-      throw new ApiError(404, `Holding not found or not owned by you`);
-    }
+  const currentPrice = Number(livePriceData[0]?.price || holding.avgBuyPrice || 0);
 
-    // 3. Get live price (cached)
-    const livePriceData = await getSingleLivePriceCached(holding.symbol);
-    const currentPrice = livePriceData[0]?.price || 0;
+  // 4. Calculate stock metrics
+  const qty = Number(holding.Quantity);
+  const avgPrice = Number(holding.avgBuyPrice);
+  const totalInvest = avgPrice * qty;
+  const currentValue = currentPrice * qty;
+  const pnl = currentValue - totalInvest;
+  const pnlPercentage = totalInvest > 0 ? Number(((pnl / totalInvest) * 100).toFixed(2)) : 0;
+  const roi = totalInvest > 0 ? Number(((pnl / totalInvest) * 100).toFixed(2)) : 0;
 
-    // 4. Calculate stock metrics
-    const qty = Number(holding.Quantity);
-    const avgPrice = Number(holding.avgBuyPrice);
-    const totalInvest = avgPrice * qty;
-    const currentValue = currentPrice * qty;
-    const pnl = currentValue - totalInvest;
-    const pnlPercentage = totalInvest > 0 ? Number(((pnl / totalInvest) * 100).toFixed(2)) : "0.00";
-    const roi = totalInvest > 0 ? Number(((pnl / totalInvest) * 100).toFixed(2)) : "0.00";
+  const priceComparisonData = priceHistoryData.map((h) => ({
+    date: h.date,
+    currentPrice: Number(h.price),
+    avgBuyPrice: avgPrice
+  }));
 
-    // 5. Get price history (from snapshots)
-    const priceHistory = await getStockHistory({ symbol: holding.symbol });
+  const valueOverTime = priceHistoryData.map((h) => ({
+    date: h.date,
+    value: Number(h.price) * qty,
+    avgBuyValue: avgPrice * qty
+  }));
 
-
-    const priceComparisonData = priceHistory.map((h) => ({
-      date: h.date,
-      currentPrice: Number(h.price),
-      avgBuyPrice: avgPrice
-    }));
-
-    const valueOverTime = priceHistory.map((h) => ({
-      date: h.date,
-      value: Number(h.price) * qty,
-      avgBuyValue: avgPrice * qty
-    }));
-
-    const pnlOverTime = priceHistory.map((h) => {
+  const pnlOverTime = priceHistoryData.map((h) => {
     const currentValueAtThatDay = Number(h.price) * qty;
     const pnlDay = currentValueAtThatDay - totalInvest;
-
-    const pnlPercent =
-      totalInvest > 0 ? Number(((pnlDay / totalInvest) * 100).toFixed(2)) : 0;
+    const pnlPercent = totalInvest > 0 ? Number(((pnlDay / totalInvest) * 100).toFixed(2)) : 0;
 
     return {
       date: h.date,
@@ -85,50 +101,52 @@ export const getStockDetailsService = async ({ userId, id  }) => {
     };
   });
 
-    // 6. Get transactions for this stock
-    const transactions = await Transaction.find({
-      Portfolio: portfolio._id,
-      symbol: holding.symbol,
-    })
-      .sort({ date: -1 })
-      .lean();
+  // 5. Get transactions for this stock
+  const transactions = await Transaction.find({
+    Portfolio: portfolio._id,
+    symbol: holding.symbol,
+  })
+    .sort({ date: -1 })
+    .lean();
 
-    const formattedTransactions = transactions.map((t) => ({
-      id: t._id,
-      date: t.date,
-      name: t.symbol,
-      qty: t.quantity,
-      price: t.pricePerUnit,
-      type: t.transactionType,
-      totalAmt: Number(t.pricePerUnit) * Number(t.quantity),
-    }));
+  const formattedTransactions = transactions.map((t) => ({
+    id: t._id,
+    date: t.date,
+    name: t.symbol,
+    qty: t.quantity,
+    price: t.pricePerUnit,
+    type: t.transactionType,
+    totalAmt: Number(t.pricePerUnit) * Number(t.quantity),
+  }));
 
-    // 7. Compile complete stock data
-    const stockData = {
-      id: holding._id,
-      symbol: holding.symbol,
-      qty,
-      avgPrice,
-      currentPrice,
-      totalInvest,
-      currentValue,
-      pnl,
-      pnlPercentage,
-      roi,
-      priceHistory,
-      transactions: formattedTransactions,
-      priceComparisonData,
-      valueOverTime,
-      pnlOverTime,
-      livePrice: livePriceData,
-    };
+  // 6. Compile complete stock data
+  const stockData = {
+    id: holding._id,
+    symbol: holding.symbol,
+    qty,
+    avgPrice,
+    currentPrice,
+    totalInvest,
+    currentValue,
+    pnl,
+    pnlPercentage,
+    roi,
+    priceSource,
+    marketDataStatus: {
+      source: priceSource,
+      liveAvailable: priceSource === "live",
+      updatedAt: new Date().toISOString(),
+    },
+    priceHistory: priceHistoryData,
+    transactions: formattedTransactions,
+    priceComparisonData,
+    valueOverTime,
+    pnlOverTime,
+    livePrice: livePriceData,
+  };
 
-    // Cache for 5 minutes
-    await cacheSet(cacheKey, stockData, 300);
+  // Cache briefly because this response contains live market value.
+  await cacheSet(cacheKey, stockData, 30);
 
-    return stockData;
-  } catch (error) {
-    logger.error("Error fetching stock details", { error });
-    throw error;
-  }
+  return stockData;
 };

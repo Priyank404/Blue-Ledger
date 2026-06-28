@@ -18,7 +18,7 @@ export const getDashboardData = async ({userId}) =>{
             recentTransaction: []
         };
         }
-        const cachedKey = `dashboard:${userId}`
+        const cachedKey = `dashboard:v2:${userId}`
         
         const cachedData = await cacheGet(cachedKey);
 
@@ -47,6 +47,8 @@ export const getDashboardData = async ({userId}) =>{
             portfolioHistory,
             recentTransaction
         };
+
+        await cacheSet(cachedKey, dashboardData, 30);
         
 
         return dashboardData;
@@ -63,7 +65,7 @@ export const getDashboardData = async ({userId}) =>{
 
 export const getPortfolioPageData = async ({userId}) =>{
     try {
-        const cachedKey = `portfolio:${userId}:page`;
+        const cachedKey = `portfolio:v2:${userId}:page`;
 
         const cachedData = await cacheGet(cachedKey);
 
@@ -83,7 +85,7 @@ export const getPortfolioPageData = async ({userId}) =>{
             portfolioHistory
          };
 
-         await cacheSet(cachedKey, portfolioData, 300);
+         await cacheSet(cachedKey, portfolioData, 30);
 
          return portfolioData;
     } catch (error) {

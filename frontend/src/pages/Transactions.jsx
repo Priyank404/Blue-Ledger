@@ -1,621 +1,362 @@
-import { useState } from 'react'
-import * as XLSX from 'xlsx'
-import DashboardLayout from '../layouts/DashboardLayout'
-import TransactionsTable from '../components/TransactionsTable'
-import { useNotification } from '../context/NotificationContext'
-import { addTransaction, deleteTransaction, importTransactionsFromCsv } from '../APIs/transaction'
-import { useTransactions } from '../context/TransactionContext'
+import React, { useState } from 'react';
+import DashboardLayout from '../layouts/DashboardLayout';
+import TransactionsTable from '../components/TransactionsTable';
+import { useNotification } from '../context/NotificationContext';
+import { addTransaction, deleteTransaction, importTransactionsFromCsv } from '../APIs/transaction';
+import { useTransactions } from '../context/TransactionContext';
+import {
+  readStatementWorkbook,
+  parseTransactionStatement,
+  parseHoldingsStatement
+} from '../utilities/statementParser';
 
+/**
+ * Transactions Blotter page. Supports manual trade entry, batch upload (Excel/CSV) for trades and opening positions, and granular history searching.
+ */
 const Transactions = () => {
+  const { transactions, loading, pagination, refreshTransactions } = useTransactions();
+  const pageSize = 8;
+  const { showNotification } = useNotification();
 
-  const { transactions, loading, pagination, refreshTransactions } = useTransactions()
-  const pageSize = 8
+  // Manual transaction inputs
+  const [selectedStock, setSelectedStock] = useState('');
+  const [transactionType, setTransactionType] = useState('BUY');
+  const [qty, setQty] = useState('');
+  const [price, setPrice] = useState('');
+  const [date, setDate] = useState('');
 
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedStock, setSelectedStock] = useState('')
-  const [transactionType, setTransactionType] = useState('BUY')
-  const [qty, setQty] = useState('')
-  const [price, setPrice] = useState('')
-  const [date, setDate] = useState('')
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [showFilters, setShowFilters] = useState(false)
-  const [transactionUploading, setTransactionUploading] = useState(false)
-  const [holdingsUploading, setHoldingsUploading] = useState(false)
-  const { showNotification } = useNotification()
-  
-  // Filter states
-  const [filterType, setFilterType] = useState('') // 'Buy', 'Sell', or ''
-  const [minPrice, setMinPrice] = useState('')
-  const [maxPrice, setMaxPrice] = useState('')
-  const [minQty, setMinQty] = useState('')
-  const [maxQty, setMaxQty] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  // UI state
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [transactionUploading, setTransactionUploading] = useState(false);
+  const [holdingsUploading, setHoldingsUploading] = useState(false);
 
+  // Search & Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStock, setFilterStock] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  // Filter logic
   const filteredTransactions = transactions.filter((transaction) => {
-    const matchesSearch = transaction.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStock = !selectedStock || transaction.name === selectedStock
-    const matchesType = !filterType || transaction.type === filterType
-    const matchesPrice = (!minPrice || transaction.price >= parseFloat(minPrice)) &&
-                        (!maxPrice || transaction.price <= parseFloat(maxPrice))
-    const matchesQty = (!minQty || transaction.qty >= parseFloat(minQty)) &&
-                      (!maxQty || transaction.qty <= parseFloat(maxQty))
-    const matchesDate = (!startDate || new Date(transaction.date) >= new Date(startDate)) &&
-                       (!endDate || new Date(transaction.date) <= new Date(endDate))
+    const nameText = transaction.name || '';
+    const matchesSearch = nameText.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStock = !filterStock || nameText === filterStock;
+    const matchesType = !filterType || transaction.type === filterType;
     
-    return matchesSearch && matchesStock && matchesType && matchesPrice && matchesQty && matchesDate
-  })
+    const parsedMinPrice = parseFloat(minPrice);
+    const matchesMinPrice = isNaN(parsedMinPrice) || transaction.price >= parsedMinPrice;
+
+    const parsedMaxPrice = parseFloat(maxPrice);
+    const matchesMaxPrice = isNaN(parsedMaxPrice) || transaction.price <= parsedMaxPrice;
+
+    const matchesStartDate = !startDate || new Date(transaction.date) >= new Date(startDate);
+    const matchesEndDate = !endDate || new Date(transaction.date) <= new Date(endDate);
+
+    return matchesSearch && matchesStock && matchesType && matchesMinPrice && matchesMaxPrice && matchesStartDate && matchesEndDate;
+  });
 
   const clearFilters = () => {
-    setSearchTerm('')
-    setSelectedStock('')
-    setFilterType('')
-    setMinPrice('')
-    setMaxPrice('')
-    setMinQty('')
-    setMaxQty('')
-    setStartDate('')
-    setEndDate('')
-  }
+    setSearchTerm('');
+    setFilterStock('');
+    setFilterType('');
+    setMinPrice('');
+    setMaxPrice('');
+    setStartDate('');
+    setEndDate('');
+  };
 
-  const normalizeHeader = (header) => String(header || '').toLowerCase().replace(/[^a-z]/g, '')
-
-  const pickValue = (row, keys) => {
-    for (const key of keys) {
-      if (row[key]) return row[key]
-    }
-    return ''
-  }
-
-  const normalizeImportDate = (value) => {
-    if (!value) return ''
-    if (typeof value === 'number') {
-      const parsedExcelDate = XLSX.SSF.parse_date_code(value)
-      if (!parsedExcelDate) return ''
-      const month = String(parsedExcelDate.m).padStart(2, '0')
-      const day = String(parsedExcelDate.d).padStart(2, '0')
-      return `${parsedExcelDate.y}-${month}-${day}`
-    }
-
-    const trimmed = String(value).trim()
-    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed
-
-    const parsed = new Date(trimmed)
-    if (Number.isNaN(parsed.getTime())) return ''
-
-    const year = parsed.getFullYear()
-    const month = String(parsed.getMonth() + 1).padStart(2, '0')
-    const day = String(parsed.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-
-  const readStatementWorkbook = async (file) => {
-    const buffer = await file.arrayBuffer()
-    const workbook = XLSX.read(buffer, {
-      type: 'array',
-      cellDates: true,
-      raw: false
-    })
-
-    return workbook.SheetNames.map((sheetName) => ({
-      sheetName,
-      rows: XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {
-        header: 1,
-        defval: '',
-        raw: false
-      })
-    }))
-  }
-
-  const isRowEmpty = (row) => row.every((cell) => String(cell || '').trim() === '')
-
-  const rowToObject = (headers, values) =>
-    headers.reduce((acc, header, index) => {
-      acc[normalizeHeader(header)] = values[index]
-      return acc
-    }, {})
-
-  const findHeaderIndex = (rows, requiredHeaders) =>
-    rows.findIndex((row) => {
-      const normalized = row.map(normalizeHeader)
-      return requiredHeaders.every((header) => normalized.includes(header))
-    })
-
-  const getStatementDate = (rows) => {
-    for (const row of rows) {
-      const text = row.join(' ')
-      const match = text.match(/\b\d{4}-\d{2}-\d{2}\b/)
-      if (match) return match[0]
-    }
-    return new Date().toISOString().slice(0, 10)
-  }
-
-  const parseTransactionStatement = (sheets) => {
-    const importedRows = []
-
-    sheets.forEach(({ rows }) => {
-      const headerIndex = findHeaderIndex(rows, ['symbol', 'quantity', 'price'])
-      if (headerIndex === -1) return
-
-      const headers = rows[headerIndex]
-      rows.slice(headerIndex + 1).forEach((values) => {
-        if (isRowEmpty(values)) return
-        const row = rowToObject(headers, values)
-
-        importedRows.push({
-          type: (pickValue(row, ['type', 'transactiontype', 'tradetype', 'buysell']) || transactionType).toUpperCase(),
-          name: pickValue(row, ['name', 'stock', 'stockname', 'company', 'companyname', 'symbol']),
-          quantity: pickValue(row, ['quantity', 'qty', 'shares', 'units']),
-          price: pickValue(row, ['price', 'priceperunit', 'rate']),
-          date: normalizeImportDate(pickValue(row, ['date', 'transactiondate', 'tradedate', 'orderexecutiontime']))
-        })
-      })
-    })
-
-    return importedRows.filter((row) => row.name || row.quantity || row.price || row.date)
-  }
-
-  const parseHoldingsStatement = (sheets) => {
-    const importedRows = []
-    const equitySheets = sheets.filter(({ sheetName }) => sheetName.toLowerCase().includes('equity'))
-    const fallbackSheets = sheets.filter(({ sheetName }) => !sheetName.toLowerCase().includes('mutual'))
-    const sheetsToParse = equitySheets.length > 0 ? equitySheets : fallbackSheets
-
-    sheetsToParse.forEach(({ rows }) => {
-      const headerIndex = findHeaderIndex(rows, ['symbol', 'quantityavailable', 'averageprice'])
-      if (headerIndex === -1) return
-
-      const statementDate = getStatementDate(rows)
-      const headers = rows[headerIndex]
-      const seenSymbols = new Set()
-
-      rows.slice(headerIndex + 1).forEach((values) => {
-        if (isRowEmpty(values)) return
-        const row = rowToObject(headers, values)
-        const symbol = pickValue(row, ['symbol'])
-        const quantity = pickValue(row, ['quantityavailable'])
-        const price = pickValue(row, ['averageprice'])
-
-        if (!symbol || !quantity || !price || symbol.includes('FUND') || seenSymbols.has(symbol)) return
-        seenSymbols.add(symbol)
-
-        importedRows.push({
-          type: 'BUY',
-          name: symbol,
-          quantity,
-          price,
-          date: statementDate
-        })
-      })
-    })
-
-    return importedRows
-  }
-
+  // Statement CSV/XLSX Upload handler
   const importStatementRows = async ({ event, statementType }) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-    const setUploading = statementType === 'transactions'
-      ? setTransactionUploading
-      : setHoldingsUploading
+    const setUploading = statementType === 'transactions' ? setTransactionUploading : setHoldingsUploading;
+    setUploading(true);
 
-    setUploading(true)
     try {
-      const sheets = await readStatementWorkbook(file)
+      const sheets = await readStatementWorkbook(file);
       const parsedTransactions = statementType === 'transactions'
-        ? parseTransactionStatement(sheets)
-        : parseHoldingsStatement(sheets)
+        ? parseTransactionStatement(sheets, transactionType)
+        : parseHoldingsStatement(sheets);
 
       if (parsedTransactions.length === 0) {
         showNotification(
           statementType === 'transactions'
-            ? 'Transaction statement must include symbol, trade_type, quantity, price and trade_date/date.'
-            : 'Holdings statement must include Symbol, Quantity Available and Average Price.',
+            ? 'Transaction statement must include Symbol, Trade Type (Side), Quantity, Price, and Date.'
+            : 'Holdings statement must include Symbol, Quantity Available, and Average Price.',
           'error'
-        )
-        return
+        );
+        return;
       }
 
-      const result = await importTransactionsFromCsv(parsedTransactions)
-      refreshTransactions(1, pageSize)
-
+      const result = await importTransactionsFromCsv(parsedTransactions);
+      refreshTransactions(1, pageSize);
       if (result.failedCount > 0) {
         showNotification(
           `Imported ${result.importedCount} rows. ${result.failedCount} rows failed. First error: row ${result.failed[0].row} - ${result.failed[0].message}`,
           'warning'
-        )
+        );
       } else {
-        showNotification(`Imported ${result.importedCount} transactions successfully`, 'success')
+        showNotification(`Imported ${result.importedCount} transactions successfully`, 'success');
       }
     } catch (error) {
-      showNotification(error.response?.data?.message || 'Failed to import statement', 'error')
+      showNotification(error.response?.data?.message || 'Failed to import statement', 'error');
     } finally {
-      setUploading(false)
-      event.target.value = ''
+      setUploading(false);
+      event.target.value = '';
     }
-  }
+  };
 
-  const handleAddTransaction = async (e) => {
-    e.preventDefault()
+  // Submit manual transaction form
+  const handleAddTransaction = async (event) => {
+    event.preventDefault();
     try {
-      const response = await addTransaction(transactionType, selectedStock, qty, price, date)
-      showNotification('Transaction added successfully', 'success')
-      setSelectedStock('')
-      setQty('')
-      setPrice('')
-      setDate('')
-      setShowAddForm(false)
-      refreshTransactions(1, pageSize)
+      await addTransaction(transactionType, selectedStock, qty, price, date);
+      showNotification('Transaction added successfully', 'success');
+      setSelectedStock('');
+      setQty('');
+      setPrice('');
+      setDate('');
+      setShowAddForm(false);
+      refreshTransactions(1, pageSize);
     } catch (error) {
-      showNotification(error.response?.data?.message || 'Failed to add transaction', 'error')
+      showNotification(error.response?.data?.message || 'Failed to add transaction', 'error');
     }
-  }
+  };
 
   const handleDeleteTransaction = async (transactionId) => {
     try {
-      const response = await deleteTransaction(transactionId)
-      showNotification('Transaction deleted successfully', 'success')
-      const nextPage = filteredTransactions.length === 1 && pagination.page > 1
-        ? pagination.page - 1
-        : pagination.page
-      refreshTransactions(nextPage, pageSize)
+      await deleteTransaction(transactionId);
+      showNotification('Transaction deleted successfully', 'success');
+      const nextPage = filteredTransactions.length === 1 && pagination.page > 1 ? pagination.page - 1 : pagination.page;
+      refreshTransactions(nextPage, pageSize);
     } catch (error) {
-      showNotification(error.response?.data?.message || 'Failed to delete transaction', 'error')
+      showNotification(error.response?.data?.message || 'Failed to delete transaction', 'error');
     }
-  }
+  };
 
   const handlePageChange = (page) => {
-    if (page === pagination.page || page < 1 || page > pagination.totalPages) return
-    refreshTransactions(page, pageSize)
-  }
+    if (page === pagination.page || page < 1 || page > pagination.totalPages) return;
+    refreshTransactions(page, pageSize);
+  };
 
-  const pageNumbers = Array.from({ length: pagination.totalPages }, (_, index) => index + 1)
+  const pageNumbers = Array.from({ length: pagination.totalPages }, (_, index) => index + 1);
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+      <div className="screen">
+        {/* Title */}
+        <section className="screen-head" aria-label="Transactions Blotter View">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Transactions</h1>
-            <p className="text-gray-600 dark:text-gray-400">Manage your buy and sell transactions</p>
+            <p className="eyebrow">Orders</p>
+            <h1 className="screen-title">Transaction Blotter</h1>
+            <p className="screen-copy">Filter, import, and enter buy/sell transactions.</p>
           </div>
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="mt-4 md:mt-0 px-6 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors shadow-md"
+          <button 
+            onClick={() => setShowAddForm((value) => !value)} 
+            className="btn-primary focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+            aria-expanded={showAddForm}
           >
-            {showAddForm ? 'Cancel' : 'Add Transaction'}
+            {showAddForm ? 'Close Entry' : 'New Transaction'}
           </button>
-        </div>
+        </section>
 
-        {/* Filters and Add Transaction Form */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 space-y-4">
-          {!showAddForm && (
-            <>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Filters</h3>
-                <div className="flex gap-2">
-                  {showFilters && (
-                    <button
-                      onClick={clearFilters}
-                      className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                    >
-                      Clear All
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
-                  >
-                    {showFilters ? 'Hide Filters' : 'Show Filters'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Basic Filters */}
-              {showFilters && (
-                <>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Stock</label>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by name..."
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Stock</label>
-              <select
-                value={selectedStock}
-                onChange={(e) => setSelectedStock(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
-              >
-                <option value="">All Stocks</option>
-                {transactions.map((stock) => (
-                  <option key={stock.id} value={stock.name}>
-                    {stock.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type</label>
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
-              >
-                <option value="">All Types</option>
-                <option value="BUY">Buy</option>
-                <option value="SELL">Sell</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Date Range Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Start Date</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">End Date</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
-              />
-            </div>
-          </div>
-
-          {/* Price Range Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Min Price (₹)</label>
-              <input
-                type="number"
-                value={minPrice}
-                onChange={(e) => setMinPrice(e.target.value)}
-                placeholder="Minimum price"
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Max Price (₹)</label>
-              <input
-                type="number"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
-                placeholder="Maximum price"
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
-              />
-            </div>
-          </div>
-
-          {/* Quantity Range Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Min Quantity</label>
-              <input
-                type="number"
-                value={minQty}
-                onChange={(e) => setMinQty(e.target.value)}
-                placeholder="Minimum quantity"
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Max Quantity</label>
-              <input
-                type="number"
-                value={maxQty}
-                onChange={(e) => setMaxQty(e.target.value)}
-                placeholder="Maximum quantity"
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
-              />
-            </div>
-          </div>
-                </>
-              )}
-            </>
-          )}
-
-          {showAddForm && (
-            <div className="border-t pt-4 mt-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Add New Transaction</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                    Import Transaction Statement
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                    Upload tradebook files with columns like symbol, trade_type, quantity, price and trade_date.
-                  </p>
-                  <label className="inline-flex items-center justify-center px-4 py-2 text-sm bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors cursor-pointer">
+        {/* Input Form or Filters bar */}
+        <section className="tile tile-pad">
+          {showAddForm ? (
+            <div className="grid gap-5 xl:grid-cols-[360px_1fr]">
+              {/* Left Column: Import Statements */}
+              <div className="grid-stack">
+                <div className="tile tile-pad" style={{ background: 'var(--surface-2)', borderColor: 'var(--line)' }}>
+                  <h2 className="tile-title mb-2">Import Tradebook</h2>
+                  <p className="screen-copy mb-3 text-xs">Upload tradebook files (CSV or Excel) containing Symbol, side, quantity, price, and date.</p>
+                  <label className="btn-primary cursor-pointer text-xs h-9 inline-flex items-center justify-center focus-within:ring-2 focus-within:ring-[var(--accent)]">
                     {transactionUploading ? 'Importing...' : 'Upload Tradebook'}
-                    <input
-                      type="file"
-                      accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                      onChange={(event) => importStatementRows({ event, statementType: 'transactions' })}
-                      disabled={transactionUploading}
-                      className="hidden"
+                    <input 
+                      type="file" 
+                      accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+                      onChange={(event) => importStatementRows({ event, statementType: 'transactions' })} 
+                      disabled={transactionUploading} 
+                      className="hidden" 
                     />
                   </label>
                 </div>
 
-                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
-                    Import Holdings Statement
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                    Upload holdings files with Symbol, Quantity Available and Average Price. These become opening BUY rows.
-                  </p>
-                  <label className="inline-flex items-center justify-center px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer">
+                <div className="tile tile-pad" style={{ background: 'var(--surface-2)', borderColor: 'var(--line)' }}>
+                  <h2 className="tile-title mb-2">Import Holdings</h2>
+                  <p className="screen-copy mb-3 text-xs">Upload opening position balances containing Symbol, Quantity Available, and Avg Price.</p>
+                  <label className="btn-ghost cursor-pointer text-xs h-9 inline-flex items-center justify-center focus-within:ring-2 focus-within:ring-[var(--line-strong)]">
                     {holdingsUploading ? 'Importing...' : 'Upload Holdings'}
-                    <input
-                      type="file"
-                      accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                      onChange={(event) => importStatementRows({ event, statementType: 'holdings' })}
-                      disabled={holdingsUploading}
-                      className="hidden"
+                    <input 
+                      type="file" 
+                      accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+                      onChange={(event) => importStatementRows({ event, statementType: 'holdings' })} 
+                      disabled={holdingsUploading} 
+                      className="hidden" 
                     />
                   </label>
                 </div>
               </div>
 
-              <form onSubmit={handleAddTransaction} className="space-y-4">
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setTransactionType('BUY')}
-                    className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${
-                      transactionType === 'BUY'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    Buy
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTransactionType('SELL')}
-                    className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${
-                      transactionType === 'SELL'
-                        ? 'bg-red-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    Sell
-                  </button>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Stock Name</label>
-                  <input
-                     type="text"
-                      value={selectedStock}
-                      onChange={(e) => setSelectedStock(e.target.value)}
-                      placeholder="Enter NSE stock name, e.g. Reliance Industries"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Quantity</label>
-                    <input
-                      type="number"
-                      value={qty}
-                      onChange={(e) => setQty(e.target.value)}
-                      placeholder="Qty"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Price</label>
-                    <input
-                      type="number"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="Price"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date</label>
-                    <input
-                      type="date"
-                      value={date}
-                      onChange={(e) => setDate(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full bg-primary-600 text-white py-2 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
-                >
-                  Add Transaction
-                </button>
-              </form>
-            </div>
-          )}
-        </div>
-
-        {/* Transactions Table */}
-        {loading ? (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 text-gray-600 dark:text-gray-300">
-            Loading transactions...
-          </div>
-        ) : (
-          <>
-            <TransactionsTable 
-              transactions={filteredTransactions} 
-              showAll={true} 
-              showDelete={true}
-              onDelete={handleDeleteTransaction}
-            />
-
-            {pagination.totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-gray-800 rounded-xl shadow-md p-4">
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Showing page {pagination.page} of {pagination.totalPages} ({pagination.total} transactions)
-                </p>
-                <div className="flex items-center gap-2 overflow-x-auto">
-                  <button
-                    type="button"
-                    onClick={() => handlePageChange(pagination.page - 1)}
-                    disabled={pagination.page === 1}
-                    className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    Prev
-                  </button>
-                  {pageNumbers.map((page) => (
+              {/* Right Column: Manual Entry Form */}
+              <form onSubmit={handleAddTransaction} className="grid gap-4" aria-label="Manual Transaction Entry Form">
+                <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Transaction Side">
+                  {['BUY', 'SELL'].map((side) => (
                     <button
-                      key={page}
+                      key={side}
                       type="button"
-                      onClick={() => handlePageChange(page)}
-                      className={`min-w-10 px-3 py-2 text-sm rounded-lg font-medium transition-colors ${
-                        page === pagination.page
-                          ? 'bg-primary-600 text-white'
-                          : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
+                      onClick={() => setTransactionType(side)}
+                      className={transactionType === side ? 'btn-primary' : 'btn-ghost'}
+                      style={transactionType === side && side === 'SELL' ? { background: 'var(--negative)' } : undefined}
+                      aria-checked={transactionType === side}
+                      role="radio"
                     >
-                      {page}
+                      {side}
                     </button>
                   ))}
-                  <button
-                    type="button"
-                    onClick={() => handlePageChange(pagination.page + 1)}
-                    disabled={pagination.page === pagination.totalPages}
-                    className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    Next
-                  </button>
+                </div>
+                <div>
+                  <label htmlFor="tx-symbol" className="label">Symbol</label>
+                  <input 
+                    id="tx-symbol" 
+                    type="text" 
+                    value={selectedStock} 
+                    onChange={(event) => setSelectedStock(event.target.value)} 
+                    placeholder="Enter NSE stock name (e.g. RELIANCE)" 
+                    className="field" 
+                    required 
+                  />
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label htmlFor="tx-quantity" className="label">Quantity</label>
+                    <input 
+                      id="tx-quantity" 
+                      type="number" 
+                      min="1"
+                      value={qty} 
+                      onChange={(event) => setQty(event.target.value)} 
+                      placeholder="Qty" 
+                      className="field" 
+                      required 
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="tx-price" className="label">Price</label>
+                    <input 
+                      id="tx-price" 
+                      type="number" 
+                      step="0.01"
+                      min="0.01"
+                      value={price} 
+                      onChange={(event) => setPrice(event.target.value)} 
+                      placeholder="Price per unit" 
+                      className="field" 
+                      required 
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="tx-date" className="label">Date</label>
+                    <input 
+                      id="tx-date" 
+                      type="date" 
+                      value={date} 
+                      onChange={(event) => setDate(event.target.value)} 
+                      className="field" 
+                      required 
+                    />
+                  </div>
+                </div>
+                <button type="submit" className="btn-primary w-full h-10 mt-2">Submit Transaction</button>
+              </form>
+            </div>
+          ) : (
+            /* Filtering Console */
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4" role="search" aria-label="Transactions Filters">
+              <div className="lg:col-span-2">
+                <label htmlFor="filter-search" className="label">Search</label>
+                <input id="filter-search" type="text" value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)} placeholder="Search symbol" className="field" />
+              </div>
+              <div>
+                <label htmlFor="filter-stock" className="label">Symbol Match</label>
+                <select id="filter-stock" value={filterStock} onChange={(event) => setFilterStock(event.target.value)} className="field">
+                  <option value="">All</option>
+                  {[...new Set(transactions.map(t => t.name))].map((symbolName) => (
+                    <option key={symbolName} value={symbolName}>{symbolName}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="filter-side" className="label">Side</label>
+                <select id="filter-side" value={filterType} onChange={(event) => setFilterType(event.target.value)} className="field">
+                  <option value="">All</option>
+                  <option value="BUY">Buy</option>
+                  <option value="SELL">Sell</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="filter-min-price" className="label">Min Price</label>
+                <input id="filter-min-price" type="number" value={minPrice} onChange={(event) => setMinPrice(event.target.value)} className="field" />
+              </div>
+              <div>
+                <label htmlFor="filter-max-price" className="label">Max Price</label>
+                <input id="filter-max-price" type="number" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} className="field" />
+              </div>
+              <div className="flex items-end">
+                <button onClick={clearFilters} type="button" className="btn-ghost w-full h-9 focus:ring-1 focus:ring-[var(--line-strong)]" aria-label="Reset all search filters">Reset Filters</button>
+              </div>
+              <div className="lg:col-span-7 grid gap-4 md:grid-cols-2">
+                <div>
+                  <label htmlFor="filter-start-date" className="label">Start Date</label>
+                  <input id="filter-start-date" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="field" />
+                </div>
+                <div>
+                  <label htmlFor="filter-end-date" className="label">End Date</label>
+                  <input id="filter-end-date" type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="field" />
                 </div>
               </div>
-            )}
-          </>
+            </div>
+          )}
+        </section>
+
+        {/* Transactions Table */}
+        <section className="tile tile-pad" aria-labelledby="blotter-table-title">
+          <h2 id="blotter-table-title" className="tile-title mb-4">Blotter Records</h2>
+          {loading ? (
+            <div className="empty" role="status">Loading transactions...</div>
+          ) : (
+            <TransactionsTable transactions={filteredTransactions} showAll showDelete onDelete={handleDeleteTransaction} />
+          )}
+        </section>
+
+        {/* Pagination controls */}
+        {pagination.totalPages > 1 && (
+          <section className="tile tile-pad flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" aria-label="Table pagination">
+            <p className="text-sm muted">Page {pagination.page} of {pagination.totalPages} / {pagination.total} rows</p>
+            <div className="flex gap-2 overflow-x-auto py-1">
+              <button type="button" onClick={() => handlePageChange(pagination.page - 1)} disabled={pagination.page === 1} className="btn-ghost h-8 px-3 text-xs" aria-label="Previous page">Prev</button>
+              {pageNumbers.map((page) => (
+                <button 
+                  key={page} 
+                  type="button" 
+                  onClick={() => handlePageChange(page)} 
+                  className={page === pagination.page ? 'btn-primary h-8 px-3 text-xs' : 'btn-ghost h-8 px-3 text-xs'}
+                  aria-label={`Go to page ${page}`}
+                  aria-current={page === pagination.page ? 'page' : undefined}
+                >
+                  {page}
+                </button>
+              ))}
+              <button type="button" onClick={() => handlePageChange(pagination.page + 1)} disabled={pagination.page === pagination.totalPages} className="btn-ghost h-8 px-3 text-xs" aria-label="Next page">Next</button>
+            </div>
+          </section>
         )}
       </div>
     </DashboardLayout>
-  )
-}
+  );
+};
 
-export default Transactions
-
+export default Transactions;

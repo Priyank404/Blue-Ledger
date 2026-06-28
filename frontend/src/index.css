@@ -2,16 +2,301 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  color-scheme: dark;
+  --bg: #080c10;
+  --chrome: #0d131a;
+  --surface: #101821;
+  --surface-2: #141f2b;
+  --surface-3: #1b2836;
+  --line: #263443;
+  --line-strong: #3a4a5b;
+  --text: #eef3f8;
+  --muted: #8d9aaa;
+  --faint: #5f6f80;
+  --accent: #4f8cff;
+  --accent-2: #8ab4ff;
+  --positive: #28c789;
+  --negative: #ff6b6b;
+  --warning: #f5b84b;
+}
+
+.light {
+  color-scheme: light;
+  --bg: #eef2f5;
+  --chrome: #f8fafc;
+  --surface: #ffffff;
+  --surface-2: #f5f7fa;
+  --surface-3: #edf1f5;
+  --line: #d8e0e8;
+  --line-strong: #b9c5d1;
+  --text: #111827;
+  --muted: #667085;
+  --faint: #98a2b3;
+  --accent: #2563eb;
+  --accent-2: #1d4ed8;
+  --positive: #047857;
+  --negative: #b42318;
+  --warning: #b54708;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  min-width: 320px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 * {
   box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@layer components {
+  .terminal-shell {
+    @apply min-h-screen;
+    background: var(--bg);
+  }
+
+  .workbench {
+    @apply min-h-screen lg:pl-[84px];
+  }
+
+  .topbar {
+    @apply sticky top-0 z-30 flex h-14 items-center justify-between border-b px-4 lg:px-6;
+    background: color-mix(in srgb, var(--chrome) 92%, transparent);
+    border-color: var(--line);
+    backdrop-filter: blur(16px);
+  }
+
+  .content-pad {
+    @apply px-4 py-5 lg:px-6 xl:px-8;
+  }
+
+  .screen {
+    @apply mx-auto max-w-[1500px] space-y-4;
+  }
+
+  .screen-head {
+    @apply grid gap-3 border-b pb-4 md:grid-cols-[1fr_auto] md:items-end;
+    border-color: var(--line);
+  }
+
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-normal;
+    color: var(--faint);
+  }
+
+  .screen-title {
+    @apply mt-1 text-2xl font-semibold tracking-normal md:text-3xl;
+    color: var(--text);
+  }
+
+  .screen-copy {
+    @apply mt-1 text-sm;
+    color: var(--muted);
+  }
+
+  .grid-stack {
+    @apply grid gap-4;
+  }
+
+  .tile {
+    @apply rounded border;
+    background: var(--surface);
+    border-color: var(--line);
+  }
+
+  .tile-pad {
+    @apply p-4 lg:p-5;
+  }
+
+  .tile-head {
+    @apply mb-4 flex items-start justify-between gap-4;
+  }
+
+  .tile-title {
+    @apply text-xs font-semibold uppercase tracking-normal;
+    color: var(--muted);
+  }
+
+  .metric-grid {
+    @apply grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .metric {
+    @apply rounded border p-4;
+    background: var(--surface);
+    border-color: var(--line);
+  }
+
+  .metric-label {
+    @apply text-[11px] font-semibold uppercase tracking-normal;
+    color: var(--faint);
+  }
+
+  .metric-value {
+    @apply mt-2 text-2xl font-semibold tabular-nums;
+    color: var(--text);
+  }
+
+  .metric-note {
+    @apply mt-1 text-xs font-medium tabular-nums;
+    color: var(--muted);
+  }
+
+  .btn {
+    @apply inline-flex h-9 items-center justify-center rounded border px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    border-color: var(--line-strong);
+  }
+
+  .btn-primary {
+    @apply btn border-transparent text-white;
+    background: var(--accent);
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-2);
+  }
+
+  .btn-ghost {
+    @apply btn;
+    background: transparent;
+    color: var(--text);
+  }
+
+  .btn-ghost:hover {
+    background: var(--surface-2);
+  }
+
+  .btn-danger {
+    @apply btn border-transparent text-white;
+    background: var(--negative);
+  }
+
+  .field {
+    @apply h-9 w-full rounded border px-3 text-sm outline-none transition-colors;
+    background: var(--surface-2);
+    border-color: var(--line-strong);
+    color: var(--text);
+  }
+
+  .field:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+
+  .field::placeholder {
+    color: var(--faint);
+  }
+
+  .label {
+    @apply mb-1.5 block text-[11px] font-semibold uppercase tracking-normal;
+    color: var(--faint);
+  }
+
+  .table-shell {
+    @apply overflow-hidden rounded border;
+    background: var(--surface);
+    border-color: var(--line);
+  }
+
+  .data-table {
+    @apply w-full text-sm;
+  }
+
+  .data-table thead {
+    background: var(--surface-2);
+  }
+
+  .data-table th {
+    @apply whitespace-nowrap px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-normal;
+    color: var(--faint);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .data-table td {
+    @apply whitespace-nowrap px-4 py-3 tabular-nums;
+    color: var(--text);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .data-table tbody tr:hover {
+    background: var(--surface-2);
+  }
+
+  .data-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .badge {
+    @apply inline-flex rounded border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-normal;
+  }
+
+  .badge-buy {
+    color: var(--positive);
+    border-color: color-mix(in srgb, var(--positive) 35%, transparent);
+    background: color-mix(in srgb, var(--positive) 10%, transparent);
+  }
+
+  .badge-sell {
+    color: var(--negative);
+    border-color: color-mix(in srgb, var(--negative) 35%, transparent);
+    background: color-mix(in srgb, var(--negative) 10%, transparent);
+  }
+
+  .sector-legend {
+    @apply mt-2 space-y-2;
+  }
+
+  .sector-row {
+    @apply grid grid-cols-[12px_1fr_auto] items-center gap-2 text-sm;
+  }
+
+  .sector-swatch {
+    @apply h-3 w-3 rounded-sm;
+  }
+
+  .sector-name {
+    @apply min-w-0 truncate;
+    color: var(--text);
+  }
+
+  .sector-value {
+    @apply tabular-nums;
+    color: var(--muted);
+  }
+
+  .profit {
+    color: var(--positive);
+  }
+
+  .loss {
+    color: var(--negative);
+  }
+
+  .muted {
+    color: var(--muted);
+  }
+
+  .empty {
+    @apply flex min-h-48 items-center justify-center rounded border border-dashed px-4 text-center text-sm;
+    border-color: var(--line);
+    color: var(--muted);
+  }
 }

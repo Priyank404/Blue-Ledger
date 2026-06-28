@@ -1,762 +1,427 @@
-import { useEffect, useState, useMemo } from 'react'
-import { Link } from 'react-router-dom'
-import DashboardLayout from '../layouts/DashboardLayout'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts'
-import { useHoldings } from "../context/HoldingsContext";
-import { useDashboard } from "../context/DashboardContext";
-import { useChart } from '../context/ChartContext'
-import { HISTORY_RANGES, buildPortfolioHistory, formatHistoryLabel } from '../utilities/portfolioHistory'
+import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import DashboardLayout from '../layouts/DashboardLayout';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from 'recharts';
+import { useHoldings } from '../context/HoldingsContext';
+import { useDashboard } from '../context/DashboardContext';
+import { formatCurrency } from '../utilities/formatters';
 
-
-//color for pie chart
-const COLORS = [
-  "#3b82f6",
-  "#22c55e",
-  "#f97316",
-  "#a855f7",
-  "#ef4444",
-  "#14b8a6"
-];
+const COLORS = ['#4f8cff', '#28c789', '#f5b84b', '#9f7aea', '#ff6b6b', '#38bdf8'];
 const STATUS_COLORS = {
-  profit: "#16a34a",   // green
-  loss: "#dc2626",     // red
-  neutral: "#9ca3af"   // gray
+  profit: '#28c789',
+  loss: '#ff6b6b',
+  neutral: '#8d9aaa'
 };
 
-const Portfolio = () => {
+const Empty = ({ children = 'No data available' }) => <div className="empty" role="status">{children}</div>;
 
+/**
+ * Portfolio page showcasing holdings distribution, sector performance, performers stats, and a robust position explorer table.
+ */
+const Portfolio = () => {
   const {
-    holdings,
+    holdings = [],
+    sectorAllocation: portfolioSectorAllocation = [],
+    sectorProfit: portfolioSectorProfit = [],
     loading: holdingsLoading
   } = useHoldings();
+  const { dashboardData, loading } = useDashboard();
+
+  const {
+    totalInvestment = 0,
+    currentTotalValue = 0,
+    totalPnl = 0,
+    numberOfStocks = 0,
+    holdingStatus = { profit: 0, loss: 0, neutral: 0 },
+    pnlDistribution = [],
+    topPerformerStock = [],
+    topLosserStock = [],
+    valueAllocation = [],
+    overallRoi = 0
+  } = dashboardData || {};
+
+  const sectorAllocation = portfolioSectorAllocation;
+  const sectorProfit = portfolioSectorProfit;
+
+  // Filter States
+  const [searchStock, setSearchStock] = useState('');
+  const [minQty, setMinQty] = useState('');
+  const [maxQty, setMaxQty] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [minPnl, setMinPnl] = useState('');
+  const [maxPnl, setMaxPnl] = useState('');
+  const [pnlFilter, setPnlFilter] = useState('');
+  const [holdingsPage, setHoldingsPage] = useState(1);
+  const holdingsPageSize = 8;
+
+  // Memoized Filtered Holdings
+  const filteredHoldings = useMemo(() => {
+    return holdings.filter((holding) => {
+      const matchesSearch = holding.symbol.toLowerCase().includes(searchStock.toLowerCase());
+      
+      const parsedMinQty = parseFloat(minQty);
+      const matchesMinQty = isNaN(parsedMinQty) || holding.Quantity >= parsedMinQty;
+      
+      const parsedMaxQty = parseFloat(maxQty);
+      const matchesMaxQty = isNaN(parsedMaxQty) || holding.Quantity <= parsedMaxQty;
+
+      const parsedMinPrice = parseFloat(minPrice);
+      const matchesMinPrice = isNaN(parsedMinPrice) || holding.currentPrice >= parsedMinPrice;
+
+      const parsedMaxPrice = parseFloat(maxPrice);
+      const matchesMaxPrice = isNaN(parsedMaxPrice) || holding.currentPrice <= parsedMaxPrice;
+
+      const parsedMinPnl = parseFloat(minPnl);
+      const matchesMinPnl = isNaN(parsedMinPnl) || holding.pnl >= parsedMinPnl;
+
+      const parsedMaxPnl = parseFloat(maxPnl);
+      const matchesMaxPnl = isNaN(parsedMaxPnl) || holding.pnl <= parsedMaxPnl;
+
+      const matchesPnlType = !pnlFilter ||
+        (pnlFilter === 'profit' && holding.pnl > 0) ||
+        (pnlFilter === 'loss' && holding.pnl < 0);
+
+      return matchesSearch && matchesMinQty && matchesMaxQty && matchesMinPrice && matchesMaxPrice && matchesMinPnl && matchesMaxPnl && matchesPnlType;
+    });
+  }, [holdings, searchStock, minQty, maxQty, minPrice, maxPrice, minPnl, maxPnl, pnlFilter]);
+
+  // Pagination Logic
+  const holdingsTotalPages = Math.ceil(filteredHoldings.length / holdingsPageSize);
+  const safePage = Math.min(holdingsPage, Math.max(holdingsTotalPages, 1));
+  const holdingsStartIndex = (safePage - 1) * holdingsPageSize;
   
+  const paginatedHoldings = useMemo(() => {
+    return filteredHoldings.slice(holdingsStartIndex, holdingsStartIndex + holdingsPageSize);
+  }, [filteredHoldings, holdingsStartIndex, holdingsPageSize]);
 
-  const { dashboardData, loading} = useDashboard();
+  const pageNumbers = Array.from({ length: holdingsTotalPages }, (_, index) => index + 1);
+  const valueChange = currentTotalValue - totalInvestment;
 
- const {
-  totalInvestment = 0,
-  currentTotalValue = 0,
-  totalPnl = 0,
-  numberOfStocks = 0,
-  portfolioHistory = [],
-  recentTransaction = [],
-  profitContribution = [],
-  lossContribution = [],
-  sectorAllocation = [],
-  sectorProfit = [],
-  holdingStatus = { profit: 0, loss: 0, neutral: 0 },
-  pnlDistribution = [],
-  topPerformerStock = [],
-  topLosserStock = [],
-  valueAllocation = [],
-  overallRoi = 0
-} = dashboardData || {};
+  // Sector Data Calculations
+  const sectorChartData = useMemo(() => {
+    const rawTotal = sectorAllocation.reduce((sum, item) => {
+      const val = Number(item.value) || 0;
+      return sum + val;
+    }, 0);
+    const valueLooksLikePercent = rawTotal > 99 && rawTotal < 101;
 
+    return sectorAllocation
+      .map((item) => {
+        const percentage = Number(item.percentage ?? (valueLooksLikePercent ? item.value : 0)) || 0;
+        const exposure = Number(valueLooksLikePercent ? (currentTotalValue * percentage) / 100 : item.value) || 0;
+        return {
+          ...item,
+          name: item.name || item.sector || 'Unknown',
+          value: exposure,
+          percentage,
+        };
+      })
+      .filter((item) => item.value > 0 || item.percentage > 0)
+      .sort((a, b) => b.value - a.value);
+  }, [sectorAllocation, currentTotalValue]);
 
-  const [searchStock, setSearchStock] = useState('')
-  const [minQty, setMinQty] = useState('')
-  const [maxQty, setMaxQty] = useState('')
-  const [minPrice, setMinPrice] = useState('')
-  const [maxPrice, setMaxPrice] = useState('')
-  const [minPnl, setMinPnl] = useState('')
-  const [maxPnl, setMaxPnl] = useState('')
-  const [pnlFilter, setPnlFilter] = useState('') // 'profit', 'loss', or ''
-  const [showFilters, setShowFilters] = useState(false)
-  const [holdingsPage, setHoldingsPage] = useState(1)
-  const [historyRange, setHistoryRange] = useState('daily')
-  const holdingsPageSize = 8
+  const clearFilters = () => {
+    setSearchStock('');
+    setMinQty('');
+    setMaxQty('');
+    setMinPrice('');
+    setMaxPrice('');
+    setMinPnl('');
+    setMaxPnl('');
+    setPnlFilter('');
+    setHoldingsPage(1);
+  };
 
+  const handlePageChange = (page) => {
+    if (page < 1 || page > holdingsTotalPages) return;
+    setHoldingsPage(page);
+  };
 
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
-
- 
-  
-  
-
-  // Filter stock holdings
-  const filteredHoldings = holdings.filter((holding) => {
-    const matchesSearch = holding.symbol.toLowerCase().includes(searchStock.toLowerCase())
-    const matchesQty = (!minQty || holding.Quantity >= parseFloat(minQty)) &&
-                      (!maxQty || holding.Quantity <= parseFloat(maxQty))
-    const matchesPrice = (!minPrice || holding.currentPrice >= parseFloat(minPrice)) &&
-                        (!maxPrice || holding.currentPrice <= parseFloat(maxPrice))
-    const matchesPnl = (!minPnl || holding.pnl >= parseFloat(minPnl)) &&
-                      (!maxPnl || holding.pnl <= parseFloat(maxPnl))
-    const matchesPnlType = !pnlFilter || 
-                          (pnlFilter === 'profit' && holding.pnl > 0) ||
-                          (pnlFilter === 'loss' && holding.pnl < 0)
-    return matchesSearch && matchesQty && matchesPrice && matchesPnl && matchesPnlType
-  })
-
-  useEffect(() => {
-    setHoldingsPage(1)
-  }, [searchStock, minQty, maxQty, minPrice, maxPrice, minPnl, maxPnl, pnlFilter])
-
-  const holdingsTotalPages = Math.ceil(filteredHoldings.length / holdingsPageSize)
-  const holdingsStartIndex = (holdingsPage - 1) * holdingsPageSize
-  const paginatedHoldings = filteredHoldings.slice(
-    holdingsStartIndex,
-    holdingsStartIndex + holdingsPageSize
-  )
-  const holdingPageNumbers = Array.from({ length: holdingsTotalPages }, (_, index) => index + 1)
-  const chartPortfolioHistory = useMemo(
-    () => buildPortfolioHistory(portfolioHistory, historyRange),
-    [portfolioHistory, historyRange]
-  )
-
-  const handleHoldingsPageChange = (page) => {
-    if (page === holdingsPage || page < 1 || page > holdingsTotalPages) return
-    setHoldingsPage(page)
-  }
-
- const isPortfolioLoading = loading || holdingsLoading ;
-
- if (isPortfolioLoading) {
+  if (loading || holdingsLoading) {
     return (
       <DashboardLayout>
-        <p className="text-gray-900 dark:text-white">Loading portfolio...</p>
+        <div className="screen" role="status">
+          <Empty>Loading portfolio...</Empty>
+        </div>
       </DashboardLayout>
     );
   }
 
-  const clearFilters = () => {
-    setSearchStock('')
-    setMinQty('')
-    setMaxQty('')
-    setMinPrice('')
-    setMaxPrice('')
-    setMinPnl('')
-    setMaxPnl('')
-    setPnlFilter('')
-  }
-
-  const valueChange = currentTotalValue - totalInvestment;
-
-  
-  const NoData = () => (
-    <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
-      No Data Available
-    </div>
-  );
-
-
-   
-
-
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="screen">
+        {/* Positions Matrix Header */}
+        <section className="screen-head" aria-label="Portfolio summary details">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Portfolio Overview</h1>
-            <p className="text-gray-600 dark:text-gray-400">View your portfolio allocation and holdings</p>
+            <p className="eyebrow">Positions</p>
+            <h1 className="screen-title">Portfolio Matrix</h1>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Portfolio Value</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(currentTotalValue)}</p>
-            <p className={`text-sm font-semibold ${valueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {valueChange >= 0 ? '+' : ''}{formatCurrency(valueChange)} ({overallRoi >= 0 ? '+' : ''}{overallRoi}%)
+          <div className="tile tile-pad min-w-64">
+            <p className="metric-label">Portfolio Value</p>
+            <p className="metric-value">{formatCurrency(currentTotalValue)}</p>
+            <p className={`metric-note ${valueChange >= 0 ? 'profit' : 'loss'}`}>
+              {valueChange >= 0 ? '+' : ''}{formatCurrency(valueChange)} / {overallRoi >= 0 ? '+' : ''}{overallRoi}%
             </p>
           </div>
-        </div>
+        </section>
 
-        {/* Portfolio Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Investment</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(totalInvestment )}</p>
+        {/* Core Stats */}
+        <section className="metric-grid" aria-label="Key position metrics">
+          <div className="metric">
+            <p className="metric-label">Investment</p>
+            <p className="metric-value">{formatCurrency(totalInvestment)}</p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Value</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(currentTotalValue )}</p>
+          <div className="metric">
+            <p className="metric-label">Current Value</p>
+            <p className="metric-value">{formatCurrency(currentTotalValue)}</p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Profit/Loss</p>
-            <p className={`text-2xl font-bold ${totalPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {totalPnl >= 0 ? '+' : ''}{formatCurrency(totalPnl )}
+          <div className="metric">
+            <p className="metric-label">Total P/L</p>
+            <p className={`metric-value ${totalPnl >= 0 ? 'profit' : 'loss'}`}>
+              {totalPnl >= 0 ? '+' : ''}{formatCurrency(totalPnl)}
             </p>
-            <p className={`text-sm mt-1 font-semibold ${totalPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {overallRoi >= 0 ? '+' : ''}{overallRoi }% ROI
+            <p className={`metric-note ${totalPnl >= 0 ? 'profit' : 'loss'}`}>
+              {overallRoi >= 0 ? '+' : ''}{overallRoi}% ROI
             </p>
           </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Number of Holdings</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{numberOfStocks}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Active stocks</p>
+          <div className="metric">
+            <p className="metric-label">Holdings</p>
+            <p className="metric-value">{numberOfStocks}</p>
+            <p className="metric-note">Active symbols</p>
           </div>
-        </div>
+        </section>
 
-        {/* Sector-wise Distribution */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Sector-wise Distribution</h2>
-            {sectorAllocation.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={sectorAllocation}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  dataKey="value"
-                  label={false}
-                >
-                  {sectorAllocation.map((entry, index) => (
-                    <Cell
-                      key={index}
-                      fill={COLORS[index %COLORS.length]}
-                    />
+        {/* Sectors charts */}
+        <section className="grid gap-4 xl:grid-cols-3">
+          <div className="tile tile-pad">
+            <div className="tile-head mb-3">
+              <div>
+                <h2 className="tile-title">Sector Allocation</h2>
+              </div>
+            </div>
+            {sectorChartData.length > 0 ? (
+              <>
+                <div style={{ height: 220 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={sectorChartData} dataKey="value" nameKey="name" outerRadius={86} innerRadius={52} paddingAngle={2}>
+                        {sectorChartData.map((_, index) => (
+                          <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value, _name, props) => [
+                          `${formatCurrency(value)} (${props.payload.percentage.toFixed(2)}%)`,
+                          props.payload.name
+                        ]}
+                        contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="sector-legend" role="presentation">
+                  {sectorChartData.map((sector, index) => (
+                    <div key={sector.name} className="sector-row">
+                      <span className="sector-swatch" style={{ background: COLORS[index % COLORS.length] }} />
+                      <span className="sector-name">{sector.name}</span>
+                      <span className="sector-value">{sector.percentage.toFixed(2)}%</span>
+                    </div>
                   ))}
-                </Pie>
-                <Tooltip formatter={(value) => `${value}%`} />
-                <Legend
-                  layout="horizontal"
-                  verticalAlign="bottom"
-                  align="center"
-                  iconType="circle"
-                  wrapperStyle={{
-                    fontSize: "12px",
-                    paddingTop: "10px"
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            ):(
-              <NoData />
-            )}
-            
+                </div>
+              </>
+            ) : <Empty />}
           </div>
 
-
-        {/* Sector Wise Profit/Loss */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Sector Wise Profit/Loss</h2>
-            {sectorProfit.length > 0  ? (<ResponsiveContainer width="100%" height={320}>
-              <BarChart
-                data={sectorProfit}
-                margin={{ top: 20, right: 20, left: 10, bottom: 70 }}
-              >
-                {/* Soft grid */}
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-
-                {/* X Axis */}
-                <XAxis
-                  dataKey="sector"
-                  tick={{ fontSize: 10, fill: "#374151" }}
-                  angle={-20}
-                  textAnchor="end"
-                  interval={0}
-                />
-
-                {/* Y Axis */}
-                <YAxis
-                  tick={{ fontSize: 12, fill: "#374151" }}
-                  tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
-                />
-
-                {/* Tooltip */}
-                <Tooltip
-                  formatter={(value) =>
-                    `₹${Number(value).toLocaleString()}`
-                  }
-                  cursor={{ fill: "rgba(59,130,246,0.08)" }}
-                  contentStyle={{
-                    borderRadius: "8px",
-                    border: "1px solid #e5e7eb",
-                    fontSize: "13px"
-                  }}
-                />
-
-                {/* Bars */}
-                <Bar
-                  dataKey="profit"
-                  radius={[6, 6, 0, 0]}
-                  isAnimationActive
-                >
-                  {sectorProfit.map((entry, index) => (
-                    <Cell
-                      key={index}
-                      fill={entry.profit >= 0 ? "#22c55e" : "#ef4444"}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>) : (
-              <NoData/>
-            )}
-           
-
+          <div className="tile tile-pad xl:col-span-2">
+            <h2 className="tile-title mb-4">Sector P/L</h2>
+            {sectorProfit.length > 0 ? (
+              <div style={{ height: 260 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={sectorProfit} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid stroke="var(--line)" strokeDasharray="2 6" />
+                    <XAxis dataKey="sector" tick={{ fill: 'var(--muted)', fontSize: 11 }} />
+                    <YAxis tick={{ fill: 'var(--muted)', fontSize: 11 }} tickFormatter={(value) => `INR ${(value / 1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)' }} />
+                    <Bar dataKey="profit" radius={[3, 3, 0, 0]}>
+                      {sectorProfit.map((entry, index) => (
+                        <Cell key={index} fill={entry.profit >= 0 ? 'var(--positive)' : 'var(--negative)'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : <Empty />}
           </div>
-        </div>
+        </section>
 
-        {/* Portfolio Growth Graph */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Portfolio Growth Over Time</h2>
-            <div className="flex flex-wrap gap-2">
-              {HISTORY_RANGES.map((range) => (
-                <button
-                  key={range.key}
-                  type="button"
-                  onClick={() => setHistoryRange(range.key)}
-                  className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-                    historyRange === range.key
-                      ? 'bg-primary-600 text-white'
-                      : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {range.label}
-                </button>
+        {/* Leaders Lists */}
+        <section className="grid gap-4 xl:grid-cols-3">
+          <div className="tile tile-pad">
+            <h2 className="tile-title mb-4">Holding Status</h2>
+            <div className="space-y-3">
+              {Object.entries(holdingStatus).map(([name, value]) => (
+                <div key={name} className="flex items-center justify-between border-b pb-3 last:border-b-0 last:pb-0" style={{ borderColor: 'var(--line)' }}>
+                  <span className="text-sm capitalize muted">{name}</span>
+                  <span className="text-sm font-semibold tabular-nums" style={{ color: STATUS_COLORS[name] }}>{value}</span>
+                </div>
               ))}
             </div>
           </div>
-          {chartPortfolioHistory.length > 0 ? (<ResponsiveContainer width="100%" height={400}>
-            <AreaChart data={chartPortfolioHistory}>
-              <defs>
-                <linearGradient id="colorPortfolio" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="day"
-                tick={{ fontSize: 12 }}
-                tickFormatter={(value) => formatHistoryLabel(value, historyRange)}
-              />
-              <YAxis
-                tick={{ fontSize: 12 }}
-                tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
-              />
-              <Tooltip
-                formatter={(value) => formatCurrency(value)}
-                labelFormatter={(label) => formatHistoryLabel(label, historyRange)}
-              />
-              <Legend />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke="#3b82f6"
-                strokeWidth={3}
-                fillOpacity={1}
-                fill="url(#colorPortfolio)"
-                name="Portfolio Value"
-              />
-            </AreaChart>
-          </ResponsiveContainer>) : (
-            <NoData/>
-          )}
-          
-        </div>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Asset Allocation */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Holdings Status</h2>
-            
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={Object.entries(holdingStatus).map(([name,value])=>({
-                    name, value,
-                  }))}
-                  dataKey="value"
-                  outerRadius={100}
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
-                >
-                  {Object.entries(holdingStatus).map(([name],index)=>(
-                    <Cell
-                      key={index}
-                      fill={STATUS_COLORS[name]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* P&L Distribution */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Profit/Loss by Stock</h2>
-           { pnlDistribution.length > 0 ? (<ResponsiveContainer width="100%" height={300}>
-              <BarChart data={pnlDistribution}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 12 }}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                />
-                <YAxis
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}k`}
-                />
-                <Tooltip
-                  formatter={(value) => formatCurrency(value)}
-                />
-                <Legend />
-                <Bar dataKey="pnl" name="Profit/Loss" radius={[8, 8, 0, 0]}>
-                  {pnlDistribution.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.pnl >= 0 ? '#10b981' : '#ef4444'} 
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>) : (
-              <NoData/>
-            )}
-            
-          </div>
-        </div>
-
-        {/* Top Performers and Losers */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top Performers */}
-          {topPerformerStock.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">🏆 Top Performers</h2>
-              <div className="space-y-3">
-                {topPerformerStock.map((stock, index) => {
-                  return (
-                    <Link
-                      key={stock.id}
-                      to={`/portfolio/${stock.id}`}
-                      className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center font-bold">
-                          {index + 1}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900 dark:text-white">{stock.symbol}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{stock.Quantity} shares</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-green-600 dark:text-green-400">+{formatCurrency(stock.pnl)}</p>
-                        <p className="text-sm text-green-600 dark:text-green-400">+{stock.pnlPercentage}%</p>
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Top Losers */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">📉 Top Losers</h2>
-            {topLosserStock.length > 0 ? (
-              <div className="space-y-3">
-                {topLosserStock.map((stock, index) => {
-                  
-                  const isNegative = stock.pnl < 0
-                  return (
-                    <Link
-                      key={stock.id}
-                      to={`/portfolio/${stock.id}`}
-                      className={`flex items-center justify-between p-4 rounded-lg transition-colors ${
-                        isNegative 
-                          ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30' 
-                          : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full text-white flex items-center justify-center font-bold ${
-                          isNegative ? 'bg-red-600' : 'bg-gray-400 dark:bg-gray-500'
-                        }`}>
-                          {index + 1}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900 dark:text-white">{stock.symbol}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{stock.Quantity} shares</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`font-bold ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                          {stock.pnl >= 0 ? '+' : ''}{formatCurrency(stock.pnl)}
-                        </p>
-                        <p className={`text-sm ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                          {stock.pnlPercentage >= 0 ? '+' : ''}{stock.pnlPercentage}%
-                        </p>
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                <p>No underperforming stocks</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Value Allocation */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Value Allocation by Stock</h2>
-          {valueAllocation.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={valueAllocation} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis dataKey="name" type="category" width={120} />
-              <Tooltip
-                formatter={(value) => formatCurrency(value)}
-              />
-              <Legend />
-              <Bar dataKey="value" fill="#3b82f6" radius={[0, 8, 8, 0]} />
-            </BarChart>
-          </ResponsiveContainer>) : (
-            <NoData/>
-          )}
-          
-          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-            {valueAllocation.slice(0, 4).map((item) => (
-
-              <div key={item.name} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">{item.name}</p>
-                <p className="text-lg font-bold text-gray-900 dark:text-white">{formatCurrency(item.value)}</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{item.percentage}%</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Stock Holdings Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Stock Holdings</h2>
-            <div className="flex gap-2">
-              {showFilters && (
-                <button 
-                  onClick={clearFilters}
-                  className="px-4 py-2 text-sm text-primary-600 hover:text-primary-700 font-semibold"
-                >
-                  Clear Filters
-                </button>
-              )}
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
-              >
-                {showFilters ? 'Hide Filters' : 'Show Filters'}
-              </button>
+          <div className="tile tile-pad">
+            <h2 className="tile-title mb-4">Top Performers</h2>
+            <div className="space-y-2">
+              {topPerformerStock.length > 0 ? topPerformerStock.slice(0, 5).map((stock) => (
+                <Link key={stock.id} to={`/portfolio/${stock.id}`} className="flex items-center justify-between rounded border p-3 hover:bg-[var(--surface-2)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--accent)]" style={{ borderColor: 'var(--line)' }}>
+                  <span className="font-semibold">{stock.symbol}</span>
+                  <span className="profit tabular-nums">+{formatCurrency(stock.pnl)}</span>
+                </Link>
+              )) : <Empty>No profitable positions</Empty>}
             </div>
           </div>
 
-          {/* Filters for Stock Holdings */}
-          {showFilters && (
-          <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Search Stock</label>
-                <input
-                  type="text"
-                  value={searchStock}
-                  onChange={(e) => setSearchStock(e.target.value)}
-                  placeholder="Search by name..."
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">P/L Type</label>
-                <select
-                  value={pnlFilter}
-                  onChange={(e) => setPnlFilter(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                >
-                  <option value="">All</option>
-                  <option value="profit">Profit Only</option>
-                  <option value="loss">Loss Only</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Min Quantity</label>
-                <input
-                  type="number"
-                  value={minQty}
-                  onChange={(e) => setMinQty(e.target.value)}
-                  placeholder="Min qty"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Max Quantity</label>
-                <input
-                  type="number"
-                  value={maxQty}
-                  onChange={(e) => setMaxQty(e.target.value)}
-                  placeholder="Max qty"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Min Price (₹)</label>
-                <input
-                  type="number"
-                  value={minPrice}
-                  onChange={(e) => setMinPrice(e.target.value)}
-                  placeholder="Min price"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Max Price (₹)</label>
-                <input
-                  type="number"
-                  value={maxPrice}
-                  onChange={(e) => setMaxPrice(e.target.value)}
-                  placeholder="Max price"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Min P/L (₹)</label>
-                <input
-                  type="number"
-                  value={minPnl}
-                  onChange={(e) => setMinPnl(e.target.value)}
-                  placeholder="Min P/L"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Max P/L (₹)</label>
-                <input
-                  type="number"
-                  value={maxPnl}
-                  onChange={(e) => setMaxPnl(e.target.value)}
-                  placeholder="Max P/L"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                />
-              </div>
+          <div className="tile tile-pad">
+            <h2 className="tile-title mb-4">Top Losers</h2>
+            <div className="space-y-2">
+              {topLosserStock.length > 0 ? topLosserStock.slice(0, 5).map((stock) => (
+                <Link key={stock.id} to={`/portfolio/${stock.id}`} className="flex items-center justify-between rounded border p-3 hover:bg-[var(--surface-2)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--accent)]" style={{ borderColor: 'var(--line)' }}>
+                  <span className="font-semibold">{stock.symbol}</span>
+                  <span className="loss tabular-nums">{formatCurrency(stock.pnl)}</span>
+                </Link>
+              )) : <Empty>No underperforming positions</Empty>}
             </div>
           </div>
-          )}
+        </section>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Stock Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Price</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Price</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Invest</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Value</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">P/L</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {paginatedHoldings.length > 0 ? (
-                  paginatedHoldings.map((holding) => (
-                  <tr key={holding.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Link
-                        to={`/portfolio/${holding.id}`}
-                        className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300"
-                      >
-                        {holding.symbol}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{holding.Quantity}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatCurrency(holding.avgBuyPrice)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatCurrency(holding.currentPrice)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatCurrency(holding.investedValue)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{formatCurrency(holding.currentValue)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`text-sm font-semibold ${
-                          holding.pnl >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}
-                      >
-                        {holding.pnl >= 0 ? '+' : ''}{formatCurrency(holding.pnl)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Link
-                        to={`/portfolio/${holding.id}`}
-                        className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
-                      >
-                        View Details
-                      </Link>
-                    </td>
-                  </tr>
-                  ))
-                ) : (
+        {/* Detailed Breakdown Charts */}
+        <section className="grid gap-4 xl:grid-cols-2">
+          <div className="tile tile-pad">
+            <h2 className="tile-title mb-4">P/L by Stock</h2>
+            {pnlDistribution.length > 0 ? (
+              <div style={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={pnlDistribution} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid stroke="var(--line)" strokeDasharray="2 6" />
+                    <XAxis dataKey="name" tick={{ fill: 'var(--muted)', fontSize: 11 }} />
+                    <YAxis tick={{ fill: 'var(--muted)', fontSize: 11 }} tickFormatter={(value) => `INR ${(value / 1000).toFixed(0)}k`} />
+                    <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)' }} />
+                    <Bar dataKey="pnl" radius={[3, 3, 0, 0]}>
+                      {pnlDistribution.map((entry, index) => (
+                        <Cell key={index} fill={entry.pnl >= 0 ? 'var(--positive)' : 'var(--negative)'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : <Empty />}
+          </div>
+
+          <div className="tile tile-pad">
+            <h2 className="tile-title mb-4">Value Allocation</h2>
+            {valueAllocation.length > 0 ? (
+              <div style={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={valueAllocation} layout="vertical" margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <XAxis type="number" tick={{ fill: 'var(--muted)', fontSize: 11 }} />
+                    <YAxis dataKey="name" type="category" width={90} tick={{ fill: 'var(--muted)', fontSize: 11 }} />
+                    <Tooltip formatter={(value) => formatCurrency(value)} contentStyle={{ background: 'var(--surface)', border: '1px solid var(--line)' }} />
+                    <Bar dataKey="value" fill="var(--accent)" radius={[0, 3, 3, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : <Empty />}
+          </div>
+        </section>
+
+        {/* Interactive Positions Explorer Table */}
+        <section className="tile tile-pad" aria-labelledby="holdings-explorer-title">
+          <div className="tile-head">
+            <div>
+              <h2 id="holdings-explorer-title" className="tile-title">Holdings Explorer</h2>
+            </div>
+            <button type="button" onClick={clearFilters} className="btn-ghost text-xs h-8 px-2" aria-label="Clear all table filters">Clear Filters</button>
+          </div>
+
+          {/* Filters Bar */}
+          <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3" role="search" aria-label="Holdings Filters">
+            <input value={searchStock} onChange={(event) => { setSearchStock(event.target.value); setHoldingsPage(1); }} placeholder="Search symbol" aria-label="Search Symbol" className="field lg:col-span-2" />
+            <select value={pnlFilter} onChange={(event) => { setPnlFilter(event.target.value); setHoldingsPage(1); }} aria-label="Filter by Profit or Loss" className="field">
+              <option value="">All P/L</option>
+              <option value="profit">Profit</option>
+              <option value="loss">Loss</option>
+            </select>
+            <input type="number" value={minQty} onChange={(event) => { setMinQty(event.target.value); setHoldingsPage(1); }} placeholder="Min qty" aria-label="Minimum Quantity" className="field" />
+            <input type="number" value={maxQty} onChange={(event) => { setMaxQty(event.target.value); setHoldingsPage(1); }} placeholder="Max qty" aria-label="Maximum Quantity" className="field" />
+            <input type="number" value={minPrice} onChange={(event) => { setMinPrice(event.target.value); setHoldingsPage(1); }} placeholder="Min price" aria-label="Minimum Price" className="field" />
+            <input type="number" value={maxPrice} onChange={(event) => { setMaxPrice(event.target.value); setHoldingsPage(1); }} placeholder="Max price" aria-label="Maximum Price" className="field" />
+            <input type="number" value={minPnl} onChange={(event) => { setMinPnl(event.target.value); setHoldingsPage(1); }} placeholder="Min P/L" aria-label="Minimum Profit or Loss" className="field" />
+          </div>
+
+          {/* Holdings Data Grid */}
+          <div className="table-shell">
+            <div className="overflow-x-auto">
+              <table className="data-table" aria-label="Active Positions">
+                <thead>
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                      No holdings match the current filters
-                    </td>
+                    <th scope="col">Symbol</th>
+                    <th scope="col">Qty</th>
+                    <th scope="col">Avg Price</th>
+                    <th scope="col">Current Price</th>
+                    <th scope="col">Invested</th>
+                    <th scope="col">Value</th>
+                    <th scope="col">P/L</th>
+                    <th scope="col">Action</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paginatedHoldings.length > 0 ? paginatedHoldings.map((holding) => (
+                    <tr key={holding.id}>
+                      <td><Link to={`/portfolio/${holding.id}`} className="font-semibold focus:underline" style={{ color: 'var(--accent-2)' }}>{holding.symbol}</Link></td>
+                      <td>{holding.Quantity}</td>
+                      <td>{formatCurrency(holding.avgBuyPrice)}</td>
+                      <td>{formatCurrency(holding.currentPrice)}</td>
+                      <td>{formatCurrency(holding.investedValue)}</td>
+                      <td>{formatCurrency(holding.currentValue)}</td>
+                      <td className={holding.pnl >= 0 ? 'profit' : 'loss'}>{holding.pnl >= 0 ? '+' : ''}{formatCurrency(holding.pnl)}</td>
+                      <td><Link to={`/portfolio/${holding.id}`} className="text-sm font-semibold hover:underline" style={{ color: 'var(--accent-2)' }} aria-label={`Open details for stock ${holding.symbol}`}>Open</Link></td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan={8} className="text-center muted">No holdings match current filters</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
+          {/* Pagination controls */}
           {holdingsTotalPages > 1 && (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                Showing page {holdingsPage} of {holdingsTotalPages} ({filteredHoldings.length} holdings)
-              </p>
-              <div className="flex items-center gap-2 overflow-x-auto">
-                <button
-                  type="button"
-                  onClick={() => handleHoldingsPageChange(holdingsPage - 1)}
-                  disabled={holdingsPage === 1}
-                  className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  Prev
-                </button>
-                {holdingPageNumbers.map((page) => (
-                  <button
-                    key={page}
-                    type="button"
-                    onClick={() => handleHoldingsPageChange(page)}
-                    className={`min-w-10 px-3 py-2 text-sm rounded-lg font-medium transition-colors ${
-                      page === holdingsPage
-                        ? 'bg-primary-600 text-white'
-                        : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    {page}
-                  </button>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" aria-label="Table pagination">
+              <p className="text-sm muted">Page {safePage} of {holdingsTotalPages} / {filteredHoldings.length} holdings</p>
+              <div className="flex gap-2 overflow-x-auto py-1">
+                <button type="button" onClick={() => handlePageChange(safePage - 1)} disabled={safePage === 1} className="btn-ghost h-8 px-3 text-xs" aria-label="Previous page">Prev</button>
+                {pageNumbers.map((page) => (
+                  <button key={page} type="button" onClick={() => handlePageChange(page)} className={page === safePage ? 'btn-primary h-8 px-3 text-xs' : 'btn-ghost h-8 px-3 text-xs'} aria-label={`Go to page ${page}`} aria-current={page === safePage ? 'page' : undefined}>{page}</button>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => handleHoldingsPageChange(holdingsPage + 1)}
-                  disabled={holdingsPage === holdingsTotalPages}
-                  className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  Next
-                </button>
+                <button type="button" onClick={() => handlePageChange(safePage + 1)} disabled={safePage === holdingsTotalPages} className="btn-ghost h-8 px-3 text-xs" aria-label="Next page">Next</button>
               </div>
             </div>
           )}
-        </div>
+        </section>
       </div>
     </DashboardLayout>
-  )
-}
+  );
+};
 
-export default Portfolio
-
+export default Portfolio;

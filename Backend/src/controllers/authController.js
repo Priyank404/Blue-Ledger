@@ -2,174 +2,122 @@ import logger from "../utilities/logger.js"
 import authServices from '../services/authServices.js';
 import ApiResponse from "../utilities/apiResponse.js";
 import { otpVerify } from "../services/otpServices.js";
-import {sendWelcomEmail} from "../services/emailServices.js";
+import { sendWelcomEmail } from "../services/emailServices.js";
 import { verifyGoogleToken } from "../services/googleAuthServices.js";
+import { asyncHandler } from "../utilities/asyncHandler.js";
 
+export const signUp = asyncHandler(async (req, res, next) => {
+  const { email, password, confirmPassword } = req.body;
 
-export const signUp = async (req, res, next) =>{
+  logger.info("User signup attempted", { email });
+  const result = await authServices.registerUser({ email, password, confirmPassword });
+  logger.info("User signup successful", { email });
 
-   try {
-        const {email, password, confirmPassword} = req.body;
+  res.cookie('token', result.token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    maxAge: 24 * 60 * 60 * 1000
+  });
 
-        logger.info("User signup attemped", {email});
+  logger.info("cookie set successfully");
 
-        const result = await authServices.registerUser({email, password, confirmPassword});
+  return res.status(200).json(
+    new ApiResponse(200, result.user, "success")      
+  );
+});
 
-        logger.info("User signup successful", {email});
+export const logIn = asyncHandler(async (req, res, next) => {
+  const { email, password } = req.body;
 
-        res.cookie('token', result.token, {
-            httpOnly: true,
-            secure: true,
-            sameSite: 'none',
-            maxAge: 24 * 60 * 60 * 1000
-        })
+  logger.info("User login attempted", { email });
+  const result = await authServices.logInUser({ email, password });
+  logger.info("User login successful", { email });
 
-        logger.info("cookie set successfully");
+  res.cookie('token', result.token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    maxAge: 24 * 60 * 60 * 1000
+  });
 
+  logger.info("cookie set successfully");
 
-        return res.status(200).json(
-            new ApiResponse(200, result.user, "success")      
-        )
-   } catch (error) {
-        logger.error("Error while signing up user", {error})
-        next(error.message)
-   }
+  return res.status(200).json(
+    new ApiResponse(200, result.user, "success")
+  );
+});
 
-}
+export const logOut = asyncHandler(async (req, res, next) => {
+  logger.info("user Logging out");
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    path: '/',
+  });
+  logger.info("cookie cleared successfully");
 
-export const logIn = async (req, res, next) =>{
+  return res.status(200).json(new ApiResponse(200, {}, "success"));
+});
 
-    try {
-        const {email, password} = req.body;
+export const getMe = asyncHandler(async (req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  const user = await authServices.getUserById(req.user.id);
 
-        logger.info("User login attemped", {email});
+  return res.status(200).json({
+    user: {
+      id: user._id,
+      email: user.email,
+    },
+  });
+});
 
-        const result = await authServices.logInUser({email, password});
+export const verifyOtpLogin = asyncHandler(async (req, res, next) => {
+  const { email, otp } = req.body;
 
-        logger.info("User login successful", {email});
+  logger.info("OTP verification attempted", { email });
+  await otpVerify(email, otp);
 
-        res.cookie('token', result.token, {
-            httpOnly: true,
-            secure: true,
-            sameSite: 'none',
-            maxAge: 24 * 60 * 60 * 1000
-        })
+  const result = await authServices.loginWithOtp(email);
 
-        logger.info("cookie set successfully");
-
-        return res.status(200).json(
-            new ApiResponse(200, result.user, "success")
-        )
-    } catch (error) {
-        logger.error("Error while logging in user", {error});
-        next(error);
-    }
-}
-
-export const logOut = async (req, res, next) =>{
-    
-    try {
-
-        logger.info("user Loging out");
-       res.clearCookie('token', {
-          httpOnly: true,
-          secure: true,
-          sameSite: 'none',
-          path: '/',          // IMPORTANT
-        });
-        logger.info("cookie cleared successfully");
-
-        return res.status(200).json(new ApiResponse(200, {}, "success"));
-
-    } catch (error) {
-        logger.error("Error while logging out user", {error});
-        next(error.message)
-    }
-}
-
-export const getMe = async (req, res, next) => {
-  try {
-    // 🔥 Disable cache here (controller level)
-    res.setHeader("Cache-Control", "no-store");
-
-    const user = await authServices.getUserById(req.user.id);
-
-    return res.status(200).json({
-      user: {
-        id: user._id,
-        email: user.email,
-      },
-    });
-  } catch (error) {
-    logger.error("Error fetching current user", { error });
-    next(error);
+  if (result.isNewUser) {
+    await sendWelcomEmail(email);
   }
-};
 
+  res.cookie('token', result.token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    maxAge: 24 * 60 * 60 * 1000
+  });
 
-export const verifyOtpLogin = async (req, res, next) => {
-  try {
+  logger.info("OTP login successful", { email });
 
-    const { email, otp } = req.body;
+  return res.status(200).json(
+    new ApiResponse(200, result.user, "success")
+  );
+});
 
-    logger.info("OTP verification attempted", { email });
+export const googleLogin = asyncHandler(async (req, res, next) => {
+  const { token } = req.body;
+  logger.info("Token received");
+  const googleUser = await verifyGoogleToken(token);
 
-    await otpVerify(email, otp);
+  logger.info("Token verified successfully");
+  const result = await authServices.loginWithGoogle(googleUser);
 
-
-    const result = await authServices.loginWithOtp(email);
-
-    if (result.isNewUser) {
-      await sendWelcomEmail(email);
-    }
-
-    res.cookie('token', result.token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: 24 * 60 * 60 * 1000
-    });
-
-    logger.info("OTP login successful", { email });
-
-    return res.status(200).json(
-      new ApiResponse(200, result.user, "success")
-    );
-
-  } catch (error) {
-    logger.error("OTP login failed", { error });
-    next(error);
+  logger.info("login with Google successfully");
+  if (result.isNewUser) {
+    await sendWelcomEmail(result.user.email);
   }
-};
 
+  res.cookie("token", result.token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    maxAge: 24 * 60 * 60 * 1000
+  });
 
-export const googleLogin = async (req, res, next) => {
-  try {
-
-    const { token } = req.body; // token from frontend
-    logger.info("Token received")
-    const googleUser = await verifyGoogleToken(token);
-
-    logger.info("Token verified successfully")
-    const result = await authServices.loginWithGoogle(googleUser);
-
-    logger.info("login with Google successfully ")
-    if (result.isNewUser) {
-      await sendWelcomEmail(result.user.email);
-    }
-
-    res.cookie("token", result.token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      maxAge: 24 * 60 * 60 * 1000
-    });
-
-    return res.json(result.user);
-
-  } catch (error) {
-    next(error);
-  }
-};
-
-
+  return res.json(result.user);
+});

@@ -7,144 +7,104 @@ import { BulkPrice } from "../services/stockDataServices.js";
 import { getLivePriceCached, getSingleLivePriceCached } from "../services/stockPriceCacheServices.js";
 import { getStockDetailsService } from "../services/SingleStockDetails.js";
 import { resolveNseStock } from "../services/stockDataServices.js";
+import { asyncHandler } from "../utilities/asyncHandler.js";
 
-export const getPrice = async (req, res, next)=>{
-    const symbol = req.params.symbol;
-
-    if(!symbol){
-        logger.error("error in fecting price as symbole not found")
-       new ApiError(400,'symbol not found')
-    }
-    try {
-        logger.info("getting price for stock")
-        
-        const data = await getStockPrice({symbol});
-
-        logger.info("Get Price successful");
-        res.status(200).json(
-            new ApiResponse(200, data, "success")
-        )
-    } catch (error) {
-        logger.error("error while fetching the price of stock ",{error});
-        next(error);
-    }
-};
-
-export const getPriceBulk = async (req, res, next) =>{
-    
-    const symbols = req.body;
-    if(!symbols){
-        logger.error("error in fecting price as symbol not found")
-        new ApiError(400, "symbol not found")
-    }
-
-    try {
-        logger.info("getting price for stocks in bulk")
-
-        const data = await BulkPrice({symbols})
-
-        logger.info("Get Price successful");
-
-        res.status(200).json(
-            new ApiResponse(200, data, "success")
-        )
-    } catch (error) {
-        logger.error("error while fetchng the price of stock",{error});
-        next(error)
-    }
-}
-
-export const getStockHistoryController = async(req, res, next) =>{
-
-    const symbol = req.params.symbol;
-    try {
-        logger.info("getting stock history")
-
-        const data = await getStockHistory({symbol});
-
-        logger.info("Get stock history successful");
-        res.status(200).json(
-            new ApiResponse(200, data, "success")
-        )
-    } catch (error) {
-        next(error)
-    }
-}
-
-export const getPriceCached = async (req, res, next) =>{
-    const symbol = req.params.symbol;
-
-    if(!symbol){
-        logger.error("error in fecting price as symbole not found")
-       new ApiError(400,'symbol not found')
-    }
-    try {
-        logger.info("getting cached price for stock")
-        
-        const data = await getSingleLivePriceCached({symbol});
-
-        logger.info("Get cached Price successful");
-        res.status(200).json(
-            new ApiResponse(200, data, "success")
-        )
-    } catch (error) {
-        logger.error("error while fetching the cached price of stock ",{error});
-        next(error);
-    }
-}
-
-export const getPriceBulkCached = async (req, res, next) =>{
-     const symbols = req.body;
-    if(!symbols){
-        logger.error("error in fecting price as symbol not found")
-        new ApiError(400, "symbol not found")
-    }
-
-    try {
-        logger.info("getting  cached price for stocks in bulk")
-
-        const data = await getLivePriceCached({symbols})
-
-        logger.info("Get cached Price successful");
-
-        res.status(200).json(
-            new ApiResponse(200, data, "success")
-        )
-    } catch (error) {
-        logger.error("error while fetchng the cached price of stock",{error});
-        next(error)
-    }
-}
-
-export const getStockDetails = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    const { id  } = req.params;
-
-    if (!id) {
-      throw new ApiError(400, "Stock symbol is required");
-    }
-
-    // ✅ Call service (all business logic there)
-    const stockData = await getStockDetailsService({ userId, id  });
-
-    return res.status(200).json(
-      new ApiResponse(200, stockData, "Stock details fetched successfully")
-    );
-  } catch (error) {
-    next(error);
+export const getPrice = asyncHandler(async (req, res, next) => {
+  const symbol = req.params.symbol;
+  if (!symbol) {
+    logger.error("Error in fetching price as symbol not found");
+    throw new ApiError(400, "symbol not found");
   }
-};
 
-export const resolveStock = async (req, res, next) => {
-  try {
-    const { query } = req.query;
-    const stock = await resolveNseStock(query);
+  logger.info("Getting price for stock");
+  const data = await getStockPrice({ symbol });
 
-    return res.status(200).json(
-      new ApiResponse(200, stock, "Stock found")
-    );
-  } catch (error) {
-    next(error);
+  logger.info("Get Price successful");
+  return res.status(200).json(
+    new ApiResponse(200, data, "success")
+  );
+});
+
+export const getPriceBulk = asyncHandler(async (req, res, next) => {
+  const symbols = Array.isArray(req.body) ? req.body : req.body?.symbols;
+  if (!symbols || !Array.isArray(symbols)) {
+    logger.error("Error in fetching price as symbol not found");
+    throw new ApiError(400, "symbol not found");
   }
-};
+
+  logger.info("Getting price for stocks in bulk");
+  const data = await BulkPrice({ symbols });
+
+  logger.info("Get Price successful");
+  return res.status(200).json(
+    new ApiResponse(200, data, "success")
+  );
+});
+
+export const getStockHistoryController = asyncHandler(async (req, res, next) => {
+  const symbol = req.params.symbol;
+  logger.info("Getting stock history");
+
+  const data = await getStockHistory({ symbol });
+
+  logger.info("Get stock history successful");
+  return res.status(200).json(
+    new ApiResponse(200, data, "success")
+  );
+});
+
+export const getPriceCached = asyncHandler(async (req, res, next) => {
+  const symbol = req.params.symbol;
+  if (!symbol) {
+    logger.error("Error in fetching price as symbol not found");
+    throw new ApiError(400, "symbol not found");
+  }
+
+  logger.info("Getting cached price for stock");
+  const data = await getSingleLivePriceCached({ symbol });
+
+  logger.info("Get cached Price successful");
+  return res.status(200).json(
+    new ApiResponse(200, data, "success")
+  );
+});
+
+export const getPriceBulkCached = asyncHandler(async (req, res, next) => {
+  const symbols = Array.isArray(req.body) ? req.body : req.body?.symbols;
+  if (!symbols || !Array.isArray(symbols)) {
+    logger.error("Error in fetching price as symbol not found");
+    throw new ApiError(400, "symbol not found");
+  }
+
+  logger.info("Getting cached price for stocks in bulk");
+  const data = await getLivePriceCached({ symbols });
+
+  logger.info("Get cached Price successful");
+  return res.status(200).json(
+    new ApiResponse(200, data, "success")
+  );
+});
+
+export const getStockDetails = asyncHandler(async (req, res, next) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  if (!id) {
+    throw new ApiError(400, "Stock ID is required");
+  }
+
+  const stockData = await getStockDetailsService({ userId, id });
+
+  return res.status(200).json(
+    new ApiResponse(200, stockData, "Stock details fetched successfully")
+  );
+});
+
+export const resolveStock = asyncHandler(async (req, res, next) => {
+  const { query } = req.query;
+  const stock = await resolveNseStock(query);
+
+  return res.status(200).json(
+    new ApiResponse(200, stock, "Stock found")
+  );
+});

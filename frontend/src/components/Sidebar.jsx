@@ -1,118 +1,120 @@
-import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { useNotification } from '../context/NotificationContext'
-import { logOutUser } from '../APIs/Auth'
-import ThemeToggle from './ThemeToggle'
+import React from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
+import { logOutUser } from '../APIs/Auth';
 
+const NAV_ITEMS = [
+  { path: '/dashboard', label: 'Dashboard', short: 'DB' },
+  { path: '/portfolio', label: 'Portfolio', short: 'PF' },
+  { path: '/transactions', label: 'Transactions', short: 'TX' },
+  { path: '/export', label: 'Export', short: 'EX' },
+];
 
+/**
+ * Sidebar component supporting desktop layout (fixed left aside) and mobile layout (fixed bottom bar).
+ */
 const Sidebar = () => {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const { logout } = useAuth()
-  const { showNotification } = useNotification()
-  const [isOpen, setIsOpen] = useState(false)
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+  const { showNotification } = useNotification();
 
-  const handleLogout = async() => {
+  const handleLogout = async () => {
     try {
-      const res = await logOutUser()
-      
-      if(res.message == "success"){
+      const res = await logOutUser();
+      if (res.message === 'success') {
         logout();
-        showNotification('Logged out successfully. See you soon!', 'error');
-        navigate("/login");
+        showNotification('Logged out successfully.', 'success');
+        navigate('/login');
       } else {
         showNotification('Logout failed. Please try again.', 'error');
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Logout failed. Please try again.';
-      showNotification(errorMessage, 'error');
-      console.log(error);
+      showNotification(error.response?.data?.message || 'Logout failed. Please try again.', 'error');
     }
-  }
-
-  const menuItems = [
-    { path: '/dashboard', label: 'Home', icon: '🏠' },
-    { path: '/portfolio', label: 'Portfolio', icon: '📊' },
-    { path: '/transactions', label: 'Transactions', icon: '💼' },
-    { path: '/export', label: 'Export Data', icon: '📥' },
-    // { path: '/settings', label: 'Settings', icon: '⚙️' },
-  ]
-
-  const isActive = (path) => location.pathname === path
+  };
 
   return (
     <>
-      {/* Mobile menu button */}
-      <button
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-md text-gray-900 dark:text-white"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
-
-      {/* Sidebar */}
+      {/* Desktop Sidebar */}
       <aside
-        className={`fixed left-0 top-0 h-full bg-gradient-to-b from-primary-800 to-primary-900 text-white transition-all duration-300 z-40 ${
-          isOpen ? 'w-64' : '-translate-x-full lg:translate-x-0 w-64'
-        }`}
+        className="fixed left-0 top-0 z-40 hidden h-screen w-[84px] border-r lg:flex lg:flex-col lg:items-center lg:justify-between lg:py-4"
+        style={{ background: 'var(--chrome)', borderColor: 'var(--line)' }}
+        aria-label="Sidebar Navigation"
       >
-        <div className="p-6 h-full flex flex-col">
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h1 className="text-2xl font-bold">Blue Ledger</h1>
-                <p className="text-primary-300 text-sm">Portfolio Tracker</p>
-              </div>
-              <ThemeToggle />
-            </div>
-          </div>
+        <div className="flex flex-col items-center gap-5">
+          <Link
+            to="/dashboard"
+            className="flex h-11 w-11 items-center justify-center rounded border text-sm font-bold hover:border-[var(--line-strong)] transition-colors"
+            style={{ borderColor: 'var(--line-strong)', color: 'var(--text)' }}
+            aria-label="Blue Ledger home"
+          >
+            BL
+          </Link>
 
-          <nav className="flex-1">
-            <ul className="space-y-2">
-              {menuItems.map((item) => (
-                <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    onClick={() => setIsOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                      isActive(item.path)
-                        ? 'bg-primary-600 text-white shadow-lg'
-                        : 'text-primary-100 hover:bg-primary-700'
-                    }`}
-                  >
-                    <span className="text-xl">{item.icon}</span>
-                    <span className="font-medium">{item.label}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          <nav className="flex flex-col gap-2" aria-label="Main navigation menu">
+            {NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `group relative flex h-11 w-11 items-center justify-center rounded border text-xs font-semibold transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--accent)] ${
+                    isActive
+                      ? 'border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_16%,transparent)] text-[var(--accent-2)]'
+                      : 'border-transparent text-[var(--muted)] hover:text-[var(--text)] hover:bg-[var(--surface-2)]'
+                  }`
+                }
+                aria-label={item.label}
+                title={item.label}
+              >
+                {item.short}
+                <span
+                  className="pointer-events-none absolute left-14 top-1/2 hidden -translate-y-1/2 rounded border px-2 py-1 text-xs group-hover:block z-50 shadow-md"
+                  style={{ background: 'var(--surface)', borderColor: 'var(--line)', color: 'var(--text)' }}
+                  role="tooltip"
+                >
+                  {item.label}
+                </span>
+              </NavLink>
+            ))}
           </nav>
-
-          <div className="mt-auto pt-4 border-t border-primary-700">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-primary-100 hover:bg-primary-700 transition-all"
-            >
-              <span className="text-xl">🚪</span>
-              <span className="font-medium">Logout</span>
-            </button>
-          </div>
         </div>
+
+        <button
+          onClick={handleLogout}
+          className="flex h-11 w-11 items-center justify-center rounded border text-xs font-semibold hover:border-[var(--line-strong)] hover:text-[var(--text)] transition-colors focus:outline-none focus:ring-1 focus:ring-red-500"
+          style={{ borderColor: 'var(--line)', color: 'var(--muted)' }}
+          title="Logout"
+          aria-label="Sign out from application"
+        >
+          OUT
+        </button>
       </aside>
 
-      {/* Overlay for mobile */}
-      {isOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
+      {/* Mobile Navigation Bar */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-4 border-t lg:hidden shadow-lg"
+        style={{ background: 'var(--chrome)', borderColor: 'var(--line)' }}
+        aria-label="Mobile Navigation"
+      >
+        {NAV_ITEMS.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            className={({ isActive }) =>
+              `flex h-14 flex-col items-center justify-center text-[11px] font-semibold transition-colors ${
+                isActive ? 'text-[var(--accent-2)]' : 'text-[var(--muted)] hover:text-[var(--text)]'
+              }`
+            }
+            aria-label={item.label}
+          >
+            <span>{item.short}</span>
+            <span className="mt-0.5 text-[10px] font-medium">{item.label}</span>
+          </NavLink>
+        ))}
+      </nav>
     </>
-  )
-}
+  );
+};
 
-export default Sidebar
-
+export default Sidebar;
